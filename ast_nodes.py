@@ -314,18 +314,15 @@ class ID(Reference):
     def __init__(self, name) -> None:
         super().__init__(None, None)
         self.name = name
-        self._type = None
         self.symbol = None
 
     def bind_symbols(self, symbol_table: sa.SymbolTable):
         try:
             self.symbol = symbol_table[self.name]
-            self.type = self.symbol.type
+            self._type = self.symbol.type
         except KeyError:
             assert self.type, (self.name, self.type)
-            try: name = self.name
-            except: name = str(self.name)
-            self.symbol = symbol_table.add_var(name, self.type)
+            self.symbol = symbol_table.add_var(self.name, self.type)
 
 
     def unparsed(self, depth: int = 0): return str(self.name)
@@ -348,7 +345,6 @@ class ID(Reference):
 
 
 def typed_formal(_, _type, _identifier):
-    _type, _identifier
     _identifier.type = _type.type
     return _identifier
 
@@ -486,7 +482,6 @@ class For(Stmt):
             self.identifier.value = i + 1
 
 
-
 class While(Stmt):
     def __init__(self, condition, body) -> None:
         self.condition = condition
@@ -494,8 +489,10 @@ class While(Stmt):
         super().__init__(None, None)
 
     def unparsed(self, depth: int = 0):
-        body_unparsed = '\n\t'.join(stmt.unparsed(depth) for stmt in self.body)
-        return f'while {self.condition.unparsed(depth)} {{\n\t{body_unparsed}\n}}'
+        indent_offset = depth * '\t'
+
+        body_unparsed = ('\n' + indent_offset).join(stmt.unparsed(depth + 1) for stmt in self.body)
+        return indent_offset + f'while {self.condition.unparsed(depth)} {{\n{body_unparsed}\n{indent_offset}}}'
 
     def bind_symbols(self, symbol_table: sa.SymbolTable):
         self.condition.bind_symbols(symbol_table)
@@ -547,9 +544,6 @@ class Return(Stmt):
     def unparsed(self, depth: int = 0):
         return depth * '\t' + f'return {self.expr.unparsed(depth)}'
 
-    def set_value(self, value): self.value = value 
-    def get_value(self): return self.value
-
     def _to_dot(self, graph: pydot.Graph = None):
         return_node = self.make_pydot_node(label = 'return_stmt')
         graph.add_node(return_node)
@@ -561,13 +555,13 @@ class Return(Stmt):
 
     def interpret(self, symbol_table):
         self.expr.interpret(symbol_table)
-        self.set_value(self.expr.value)
+        self.value = self.expr.value
         raise ReturnInterrupt(self.expr.value)
 
 
 class Call(Expr):
     def __init__(self, identifier, actuals) -> None:
-        super().__init__(identifier.start_token, actuals.children[-1].end_token if actuals.children else identifier.end_token)
+        super().__init__(None, None)
         self.identifier = identifier
         self.type = None
         self.actuals = actuals.children if actuals else []
@@ -590,10 +584,7 @@ class Call(Expr):
 
     @value.setter
     def value(self, value):
-        try:
-            self.values.append(value)
-        except AttributeError:
-            pass
+        self.values.append(value)
 
     def _to_dot(self, graph: pydot.Graph = None):
         # fn def
@@ -634,10 +625,7 @@ class Call(Expr):
 
 class If(Stmt):
     def __init__(self, if_block, else_if_blocks, else_block) -> None:
-        super().__init__(  # this is WRONG, TODO
-            None,
-            None
-        )
+        super().__init__(None, None)
         
         self.if_sequence = []
 
@@ -714,36 +702,3 @@ class If(Stmt):
                 stmt.interpret(symbol_table)
 
             break
-
-
-class ClsDef(Stmt):
-    def __init__(self, decorator, _id, super_class, *methods) -> None:
-        super().__init__(_id.line, _id.column)
-        self.decorator = decorator
-        self._id = _id
-        self.super_class = super_class
-        self.methods = methods
-
-    def bind_symbols(self, symbol_table: sa.SymbolTable):
-        symbol_table.add_cls(self._id.name, types.ClassType(self._id.name))
-        symbol_table.enter_scope(self._id.name)
-
-        for method in self.methods:
-            method.bind_symbols(symbol_table)
-
-        symbol_table.leave_scope()
-
-
-
-    def unparsed(self, depth: int = 0):
-        return 'NOT IMPLEMENTED'
-
-    def _to_dot(self, graph: pydot.Graph = None):
-        class_def_node = self.make_pydot_node(label = f'cls_def: "{self._id.name}"')
-        graph.add_node(class_def_node)
-
-        for method in self.methods:
-            method_node = method._to_dot(graph)[1]
-            graph.add_edge(pydot.Edge(class_def_node, method_node))
-
-        return graph, class_def_node

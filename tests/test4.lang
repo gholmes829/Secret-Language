@@ -37,6 +37,6 @@ num main() {
     else {
         print(10)
     }
-
+    return 0
 
 }

@@ -1,0 +1,25 @@
+AST:
+- track token line and col
+- do name analysis error checking
+- do type analysis error checking
+
+Python Dev/ Testing Interpreter:
+- track scope while interpreting
+
+Features:
+- implement classes
+- implement more primitive types (lists, tuples, sets, dicts)
+- concurrency
+
+Testing:
+- automated interpreter testing
+- github actions CI
+
+Refactoring:
+- refactor function call interpret method
+- refactor semantic_analysis
+- redesign shapes and colors for dot ASTs
+
+Future:
+- Go interpreter
+- Other features; see features.txt!!

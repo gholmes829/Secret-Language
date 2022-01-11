@@ -26,7 +26,6 @@ class AST:
         try:
             self.root.interpret(self.symbol_table)
         except nodes.ReturnInterrupt as RI:
-            print(f'Exited with return code: {int(RI.ret_val)}')
             exit_code = int(RI.ret_val)
         else:
             raise ValueError('Did not recieve any exit code...')
@@ -45,8 +44,6 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     fn_def = nodes.FnDef
     typed_formal = nodes.typed_formal
-
-    cls_def = nodes.ClsDef
 
     scoped_id = simple_id = nodes.ID
 
