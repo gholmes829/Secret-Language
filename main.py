@@ -2,11 +2,11 @@
 
 """
 
+import sys
 import os.path as osp, os
 import argparse
 import lark
 import subprocess
-import threading
 
 import ast_gen
 
@@ -60,7 +60,9 @@ def main():
     run_in_shell(f'dot -Tpng {out_dot_path} -o {out_png_path}')
 
     print('Running:')
-    ast.interpret()
+    exit_code = ast.interpret()
+
+    sys.exit(exit_code)
 
 
 if __name__ == '__main__':

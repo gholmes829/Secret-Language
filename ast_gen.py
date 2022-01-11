@@ -22,10 +22,16 @@ class AST:
         return self.root.to_dot()[0].to_string()
 
     def interpret(self):
+        exit_code = None
         try:
             self.root.interpret(self.symbol_table)
         except nodes.ReturnInterrupt as RI:
-            print(f'Exited with return code: {RI.ret_val}')
+            print(f'Exited with return code: {int(RI.ret_val)}')
+            exit_code = int(RI.ret_val)
+        else:
+            raise ValueError('Did not recieve any exit code...')
+        
+        return exit_code
         
 
 

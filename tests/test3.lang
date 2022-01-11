@@ -10,5 +10,6 @@ num fib(num arg) {
 
 num main() {
     print('Fibonacci Generator:')
-    for i in 10 { print(i + " - " + fib(i)) }
+    for i in 16 { print(i + " - " + fib(i)) }
+    return 0
 }
