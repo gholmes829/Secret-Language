@@ -1,0 +1,11 @@
+class Test {
+    num fn(num a1, num a2) {
+        l1 = 2
+        l2 = 8
+        return l1 * l2
+    }
+}
+
+void main() {
+    t = Test()
+}

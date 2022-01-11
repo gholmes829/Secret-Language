@@ -1,0 +1,118 @@
+// start
+root: global*
+
+// globals
+?global: import_stmt
+    | assign_stmt
+    | fn_def
+    | cls_def
+
+// definitions
+?decorator: "@" (scope_modifier | fn_call)
+
+// stmt
+?stmt: assign_stmt
+    | fn_def
+    | cls_def
+    | ctrl_stmt
+    | import_stmt
+    | fn_call
+
+// expr
+?!expr: expr "-" term -> bin_op
+    | expr "+" term -> bin_op
+    | expr "*" term -> bin_op
+    | expr "/" term -> bin_op
+    | expr ("and" | "&&") term -> bin_op
+    | expr ("or" | "||") term -> bin_op
+    | expr "==" term -> bin_op
+    | expr "!=" term -> bin_op
+    | expr ">" term -> bin_op
+    | expr ">=" term -> bin_op
+    | expr "<" term -> bin_op
+    | expr "<=" term -> bin_op
+    | ("not" | "!") expr -> l_not
+    | "-" term -> negate
+    | term
+
+// term
+?term: NUMBER -> num
+    | STRING -> string
+    | BOOLEAN -> boolean
+    | "(" expr ")"
+    | user_fn_call
+    | scoped_id
+
+// fun calls
+?fn_call: std_fn_call | user_fn_call
+
+?std_fn_call: "print" "(" expr ")" -> print_call
+    | "input" "(" expr ")" -> input_call
+    | "assert" "(" expr ")" -> assert_call
+
+// control statements
+?ctrl_stmt: if [else_ifs] [else] -> if_stmt
+    //| unless else_unless* [elses] -> unless_stmt
+    | "while" expr "{" body "}" -> while_stmt
+    | "until" expr "{" body "}" -> until_stmt
+    | "for" simple_id "in" expr "{" body "}" -> for_stmt
+    | "return" expr -> return_stmt
+
+// import statements
+import_stmt: "from" scoped_id "import" imported_object+
+imported_object: scoped_id ["as" simple_id]
+
+// control statements
+else_ifs.1: else_if*
+else_if: _ELSE_IF expr "{" body "}"
+else: "else" "{" body "}"
+if: "if" expr "{" body "}"
+
+unless: "unless" expr "{" body "}"
+else_unless: "else" "unless" expr "{" body "}"
+
+// assign statements
+assign_stmt: scoped_id "=" expr
+
+// body stmt
+body: stmt*
+
+// definitions
+cls_def: [decorator] "class" simple_id ["(" scoped_id ")"] "{" fn_def* "}"
+
+fn_def: [decorator] obj_type simple_id "(" [formals] ")" "{" body "}"
+formals: typed_formal ("," typed_formal)*
+typed_formal: obj_type simple_id
+
+// fn calls
+user_fn_call: scoped_id "(" [actuals] ")"
+actuals: expr ("," expr)*
+
+// typing
+?obj_type: [scope_modifier] pure_type [execution_modifier]
+
+?!pure_type: "bool" | "num" | "str" | "void" | scoped_id
+
+?!scope_modifier: "static"
+
+?!execution_modifier: "channel"
+
+// ids
+scoped_id: CNAME ("." CNAME)*
+simple_id: CNAME
+
+// terminals
+_ELSE_IF.1: /else[ \t\f]+if/
+BOOLEAN.1: "true" | "false"
+STRING: (("\"" STRING_INNER "\"") | ("'" STRING_INNER "'"))
+NUMBER: SIGNED_NUMBER
+
+%import common.CNAME
+%import common._STRING_ESC_INNER -> STRING_INNER
+%import common.SIGNED_NUMBER
+%import common.WS
+
+%import common.CPP_COMMENT
+
+%ignore WS
+%ignore CPP_COMMENT

@@ -1,0 +1,7 @@
+num fn(num arg) {
+    var = 1
+}
+
+num main() {
+
+}

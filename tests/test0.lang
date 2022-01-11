@@ -1,0 +1,35 @@
+
+bool fn(num arg, num arg2) {
+    l1 = 3
+    l2 = 5 * l1
+    if l2 < l1 {
+        l3 = arg
+        print(l3)
+    }
+    else if l2 > l1 {
+        l3 = arg2
+        print(l3)
+    }
+    else if l2 == l1 {
+        l3 = 1
+        print(l3)
+    }
+    else {
+        l2 = l3
+        print(l2)
+    }
+
+    print(l1 + l2 / arg)
+}
+
+void main() {
+    k = 8
+    for i in k {
+        print(i)
+        while (fn(3, 5) and true) {
+            i = i - 1
+            z = 3
+            main()
+        }
+    }
+}
