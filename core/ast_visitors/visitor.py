@@ -30,10 +30,6 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def visitFnDef(self, fn_def_node, *args, **kwargs):
-        raise NotImplementedError
-
-    @abstractmethod
     def visitCall(self, call_node, *args, **kwargs):
         raise NotImplementedError
 
@@ -54,7 +50,11 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def visitObjType(self, obj_type_node, *args, **kwargs):
+    def visitPrimitiveType(self, obj_type_node, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def visitFnType(self, fn_def_node, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod

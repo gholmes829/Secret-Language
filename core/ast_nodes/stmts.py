@@ -24,19 +24,6 @@ class AssignStmt(Stmt):
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitAssign(self, *args, **kwargs)
 
-class FnDef(Stmt):
-    def __init__(self, decorator, ret_type, identifier, formals, body) -> None:
-        super().__init__(None, None)
-        self.decorator = decorator
-        self.ret_type = ret_type
-        self.identifier = identifier
-        self.name = identifier.name
-        self.formals = formals.children if formals else []
-        self.body = body.children
-        self.symbol = None
-
-    def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnDef(self, *args, **kwargs)
 
 class Return(Stmt):
     def __init__(self, expr) -> None:

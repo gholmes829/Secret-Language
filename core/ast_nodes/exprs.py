@@ -60,6 +60,9 @@ class ID(Reference):
     def value(self, _value):
         self.symbol.value = _value
 
+    def __repr__(self) -> str:
+        return f'<ID "{self.name}" at {id(self)}>'
+
 class BinOp(Expr):
     ops = {
         '+': (lambda lhs, rhs: lhs + rhs, 'addition'),

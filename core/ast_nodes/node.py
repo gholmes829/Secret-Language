@@ -24,7 +24,7 @@ class ASTNode(metaclass = ABCMeta):
 
 # root of program
 class Root(ASTNode):
-    def __init__(self, *stmts) -> None:
+    def __init__(self, stmts) -> None:
         super().__init__(None, None)
         self.stmts = stmts
 

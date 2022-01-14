@@ -24,40 +24,31 @@ class VarSymbol(SemSymbol):
 
 
 class FnSymbol(SemSymbol):
-    def __init__(self, name, formal_types, ret_type, body, formals) -> None:
+    def __init__(self, identifier, ret_type, body, formals) -> None:
         super().__init__()
-        self.name = name
-        self.formal_types = formal_types
+        self.identifier = identifier
         self.ret_type = ret_type
         self.body = body
         self.formals = formals
-
-
-class ClsSymbol(SemSymbol):
-    def __init__(self, name, ret_type) -> None:
-        super().__init__()
-        self.name = name
-        self.ret_type = ret_type
+        self.formal_types = [formal.type for formal in formals]
 
 
 class ScopeTable:
-    def __init__(self, name) -> None:
+    def __init__(self, name, prev_scope) -> None:
         self.name = name
+        self.prev_scope = prev_scope
+        self.depth = prev_scope.depth + 1 if prev_scope else 0
+        self.chain_name = prev_scope.chain_name + f'.{name}' if prev_scope else name
         self.table = {}
 
-    def add_var(self, name, var_type):
+    def add_primitive(self, name, var_type):
         sym = VarSymbol(name, var_type)
         self.table[name] = sym
         return sym
 
-    def add_fn(self, name, formal_types, ret_type, body, formals):
-        sym = FnSymbol(name, formal_types, ret_type, body, formals)
-        self.table[name] = sym
-        return sym
-
-    def add_cls(self, name, ret_type):
-        sym = ClsSymbol(name, ret_type)
-        self.table[name] = sym
+    def add_fn(self, identifier, ret_type, body, formals):
+        sym = FnSymbol(identifier, ret_type, body, formals)
+        self.table[identifier] = sym
         return sym
 
     def __getitem__(self, key):
@@ -66,49 +57,59 @@ class ScopeTable:
     def __contains__(self, key):
         return key in self.table
 
+    def __repr__(self):
+        return f'<{self.chain_name} -> {repr(self.table)}>'
+
 
 class SymbolTable:
     def __init__(self) -> None:
+        self.curr_scope = None
         self.symbols = {}
-        self.table_chain = []  # global scope
-        self.chain_path = ()
 
     def enter_scope(self, scope_name):
-        self.table_chain.append(ScopeTable(scope_name))
-        self.chain_path += (scope_name,)
+        self.curr_scope = ScopeTable(scope_name, self.curr_scope)
+        return self
 
     def leave_scope(self):
-        self.table_chain.pop()
-        self.chain_path = self.chain_path[:-1]
-
-    def get_current_scope(self):
-        return self.table_chain[-1]
-
-    def add_var(self, name, var_type):
-        sym = self.get_current_scope().add_var(name, var_type)
-        self.symbols[self.chain_path + (str(name),)] = sym
+        self.curr_scope = self.curr_scope.prev_scope
+        
+    def add_primitive(self, name, var_type):
+        sym = self.curr_scope.add_primitive(name, var_type)
+        self.symbols[self.curr_scope.chain_name + f'.{name}'] = sym
         return sym
 
-    def add_fn(self, name, formal_types, ret_type, body, formals):
-        sym = self.get_current_scope().add_fn(name, formal_types, ret_type, body, formals)
-        self.symbols[self.chain_path + (str(name),)] = sym
-        return sym
-
-    def add_cls(self, name, ret_type):
-        sym = self.get_current_scope().add_cls(name, ret_type)
-        self.symbols[self.chain_path + (str(name),)] = sym
+    def add_fn(self, identifier, ret_type, body, formals):
+        sym = self.curr_scope.add_fn(identifier, ret_type, body, formals)
+        self.symbols[self.curr_scope.chain_name + f'.{identifier}'] = sym
         return sym
 
     def __getitem__(self, key):
-        for scope in self.table_chain:
-            if key in scope.table:
-                return scope.table[key]
-        if key in self.symbols:
-            return self.symbols[key]
-        raise KeyError
+        tmp_scope = self.curr_scope
+        while tmp_scope:
+            try:
+                return tmp_scope[key]
+            except KeyError:
+                tmp_scope = tmp_scope.prev_scope
 
     def __contains__(self, key):
-        for scope in self.table_chain:
-            if key in scope.table:
+        tmp_scope = self.curr_scope
+        while tmp_scope:
+            if key in tmp_scope:
                 return True
-        raise KeyError
+            tmp_scope = tmp_scope.prev_scope
+
+    def __enter__(self) -> None:
+        return self
+
+    def __exit__(self, *_: list) -> None:
+        self.leave_scope()
+
+    def __repr__(self) -> str:
+        scopes = []
+        tmp_scope = self.curr_scope
+
+        while tmp_scope:
+            scopes.append(repr(tmp_scope))
+            tmp_scope = tmp_scope.prev_scope
+        joined = ", ".join(reversed(scopes))
+        return f'<scopes -> [{joined}]>'

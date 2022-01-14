@@ -36,7 +36,12 @@ class GraphManager(Visitor):
         return print_graph_node
 
     def visitID(self, id_node, graph):
-        node = id_node.make_pydot_node(label = f'ID: "{id_node.name}"\nType: {ast_nodes.ObjType.inv_data_types[id_node.type]}')
+        try:
+            id_type = ast_nodes.PrimitiveType.inv_data_types[id_node.type]
+        except KeyError:
+            id_type = id_node.type
+
+        node = id_node.make_pydot_node(label = f'ID: "{id_node.name}"\nType: {id_type}')
         graph.add_node(node)
         return node
 
@@ -61,42 +66,6 @@ class GraphManager(Visitor):
         graph.add_edge(pydot.Edge(operation_node, lhs_node))
         graph.add_edge(pydot.Edge(operation_node, rhs_node))
         return operation_node
-
-    def visitFnDef(self, fn_def_node, graph):
-        # fn def
-        fn_def_graph_node = fn_def_node.make_pydot_node(label = f'FnDef: "{fn_def_node.name}"')
-        graph.add_node(fn_def_graph_node)
-
-        # ret type
-        ret_type_node = fn_def_node.ret_type.accept(self, graph)
-        assert fn_def_graph_node and ret_type_node
-        graph.add_edge(pydot.Edge(fn_def_graph_node, ret_type_node))
-
-        # formals
-        formals_node = pydot.Node(hash(tuple(fn_def_node.formals) + (fn_def_node.name,)), label = 'formals')
-        graph.add_node(formals_node)
-
-        assert formals_node
-        graph.add_edge(pydot.Edge(fn_def_graph_node, formals_node))
-
-        for formal in fn_def_node.formals:
-            formal_node = formal.accept(self, graph)
-            assert formal_node
-            graph.add_edge(pydot.Edge(formals_node, formal_node))
-
-        # body
-        body_node = pydot.Node(hash(tuple(fn_def_node.body)), label = 'body')
-        graph.add_node(body_node)
-
-        assert body_node
-        graph.add_edge(pydot.Edge(fn_def_graph_node, body_node))
-
-        for stmt in fn_def_node.body:
-            stmt_node = stmt.accept(self, graph)
-            assert stmt_node
-            graph.add_edge(pydot.Edge(body_node, stmt_node))
-
-        return fn_def_graph_node
 
 
     def visitCall(self, call_node, graph):
@@ -207,13 +176,52 @@ class GraphManager(Visitor):
 
         return kw_node
 
-    def visitObjType(self, obj_type_node, graph):
-        num = obj_type_node.make_pydot_node(fillcolor='burlywood', shape='hexagon', label = f'ObjType: "{ast_nodes.ObjType.inv_data_types[obj_type_node.type]}"')
+    def visitPrimitiveType(self, obj_type_node, graph):
+        num = obj_type_node.make_pydot_node(fillcolor='burlywood', shape='hexagon', label = f'PrimitiveType: "{ast_nodes.PrimitiveType.inv_data_types[obj_type_node.type]}"')
         graph.add_node(num)
         return num
 
+    def visitFnType(self, fn_type_node, graph):
+        # fn def
+        fn_type_graph_node = fn_type_node.make_pydot_node(label = f'FnType')
+        graph.add_node(fn_type_graph_node)
+
+        # ret type
+        ret_type_base_node = pydot.Node(hash((fn_type_node.ret_type, id(fn_type_node))), label = f'return_type')
+        graph.add_node(ret_type_base_node)
+        graph.add_edge(pydot.Edge(fn_type_graph_node, ret_type_base_node))
+        ret_type_node = fn_type_node.ret_type.accept(self, graph)
+        assert fn_type_graph_node and ret_type_node
+        graph.add_edge(pydot.Edge(ret_type_base_node, ret_type_node))
+
+        # formals
+        formals_node = pydot.Node(hash(tuple(fn_type_node.formals) + (id(fn_type_node),)), label = 'formals')
+        graph.add_node(formals_node)
+
+        assert formals_node
+        graph.add_edge(pydot.Edge(fn_type_graph_node, formals_node))
+
+        for formal in fn_type_node.formals:
+            formal_node = formal.accept(self, graph)
+            assert formal_node
+            graph.add_edge(pydot.Edge(formals_node, formal_node))
+
+        # body
+        body_node = pydot.Node(hash(tuple(fn_type_node.body)), label = 'body')
+        graph.add_node(body_node)
+
+        assert body_node
+        graph.add_edge(pydot.Edge(fn_type_graph_node, body_node))
+
+        for stmt in fn_type_node.body:
+            stmt_node = stmt.accept(self, graph)
+            assert stmt_node
+            graph.add_edge(pydot.Edge(body_node, stmt_node))
+
+        return fn_type_graph_node
+
     def visitLiteral(self, literal_node, graph):
-        data = literal_node.make_pydot_node(label = f'{ast_nodes.ObjType.inv_data_types[literal_node.type]}_lit: "{literal_node.value}"')
+        data = literal_node.make_pydot_node(label = f'{ast_nodes.PrimitiveType.inv_data_types[literal_node.type]}_lit: "{literal_node.value}"')
         graph.add_node(data)
         return data
 

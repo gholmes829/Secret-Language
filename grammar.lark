@@ -1,5 +1,7 @@
 // start
-root: global*
+root: globals
+
+globals: global*
 
 // globals
 ?global: import_stmt

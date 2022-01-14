@@ -6,6 +6,7 @@
 
 import lark
 from icecream import ic
+from core.ast_nodes.stmts import AssignStmt
 
 import core.env as sa
 from core import ast_nodes
@@ -45,7 +46,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     def __init__(self) -> None:
         super().__init__()
 
-    root = lambda _, *args, **kwargs: AST(ast_nodes.Root(*args, **kwargs))
+    def root(self, stmts):
+        return AST(ast_nodes.Root(stmts.children))
 
     print_call = ast_nodes.Print
 
@@ -59,7 +61,15 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     assign_stmt = ast_nodes.AssignStmt
 
-    fn_def = ast_nodes.FnDef
+    def fn_def(self, decorator, ret_type, identifier, formals, body):
+        fn_type = ast_nodes.FnType(
+            decorator,
+            ret_type,
+            formals.children if formals else [],
+            body.children
+        )
+        
+        return AssignStmt(identifier, fn_type)
 
     def typed_formal(self, type_node, id_node):
         id_node.type = type_node.type
@@ -89,7 +99,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     for_stmt = ast_nodes.For
 
-    obj_type = ast_nodes.ObjType
+    def obj_type(self, scope_modifier, obj_type_token, execution_modifier):
+        return ast_nodes.PrimitiveType(scope_modifier, obj_type_token.value, execution_modifier)
 
     def num(self, num_token):
         return ast_nodes.NumLit(float(num_token.value))
