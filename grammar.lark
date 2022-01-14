@@ -87,13 +87,17 @@ formals: typed_formal ("," typed_formal)*
 typed_formal: obj_type simple_id
 
 // fn calls
-user_fn_call: scoped_id "(" [actuals] ")"
+user_fn_call: scoped_id ("(" [actuals] ")")+
 actuals: expr ("," expr)*
 
 // typing
 ?obj_type: [scope_modifier] pure_type [execution_modifier]
 
-?!pure_type: "bool" | "num" | "str" | "void" | scoped_id
+?pure_type: BOOL | NUM | STR | NULL | fn_type | scoped_id
+
+?fn_type: FN "[" [anon_inputs] "->" obj_type "]"
+
+anon_inputs: obj_type ("," obj_type)*
 
 ?!scope_modifier: "static"
 
@@ -108,6 +112,12 @@ _ELSE_IF.1: /else[ \t\f]+if/
 BOOLEAN.1: "true" | "false"
 STRING: (("\"" STRING_INNER "\"") | ("'" STRING_INNER "'"))
 NUMBER: SIGNED_NUMBER
+FN: "fn"
+BOOL: "bool"
+NUM: "num"
+STR: "str"
+NULL: "null"
+
 
 %import common.CNAME
 %import common._STRING_ESC_INNER -> STRING_INNER

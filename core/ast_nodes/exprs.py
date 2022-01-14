@@ -3,6 +3,7 @@
 """
 
 import lark
+from icecream import ic
 
 from core.ast_nodes.node import ASTNode
 
@@ -59,6 +60,19 @@ class ID(Reference):
     @value.setter
     def value(self, _value):
         self.symbol.value = _value
+
+    @property
+    def type(self):
+        if self.symbol:
+            return self.symbol.type
+        else:
+            return self._type
+
+    @type.setter
+    def type(self, type):
+        self._type = type
+        if self.symbol:
+            self.symbol.type = type
 
     def __repr__(self) -> str:
         return f'<ID "{self.name}" at {id(self)}>'

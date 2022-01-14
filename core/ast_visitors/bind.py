@@ -53,6 +53,7 @@ class Binder(Visitor):
             for actual in call_node.actuals:
                 actual.accept(self, symbol_table)
 
+        # store the return type
         call_node.type = call_node.identifier.type.ret_type.type
 
     def visitReturn(self, return_node, symbol_table):
@@ -95,6 +96,10 @@ class Binder(Visitor):
 
             for stmt in fn_type_node.body:
                 stmt.accept(self, symbol_table)
+
+
+    def visitFnSignature(self, fn_sig_node, symbol_table):
+        pass
 
 
     def visitLiteral(self, literal_node, symbol_table):

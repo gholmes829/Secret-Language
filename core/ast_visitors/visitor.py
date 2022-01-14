@@ -58,6 +58,10 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def visitFnSignature(self, fn_sig_node, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
     def visitLiteral(self, literal_node, *args, **kwargs):
         raise NotImplementedError
 

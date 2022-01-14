@@ -42,6 +42,7 @@ class FnType(ObjectType):
         self.formals = formals
         self.body = body
         self.type = self
+        self.value = self
         self.symbol = None
 
     def accept(self, visitor, *args, **kwargs):
@@ -49,3 +50,19 @@ class FnType(ObjectType):
 
     def __repr__(self) -> str:
         return f'<fn_type at {id(self)}>'
+
+
+class FnSignature(ObjectType):
+    def __init__(self, scope_modifier, signature, execution_modifier) -> None:
+        self.identifier = str(id(self))
+        self.scope_modifier = scope_modifier
+        self.signature = signature
+        self.execution_modifier = execution_modifier
+        self.type = self
+        self.formal_types, self.ret_type = self.signature
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitFnSignature(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<fn_signature at {id(self)}>'

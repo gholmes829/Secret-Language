@@ -65,6 +65,9 @@ class Unparser(Visitor):
 
         return f'({formals_unparsed}) -> {ret_type_unparsed} {{\n{body_unparsed}\n{base_depth_str}}}'
 
+    def visitFnSignature(self, fn_sig_node, depth):
+        return f'fn[{", ".join([f_type.accept(self, depth) for f_type in fn_sig_node.formal_types])} -> {fn_sig_node.ret_type.accept(self, depth)}]'
+
     def visitLiteral(self, literal_node, depth):
         raise NotImplementedError
 

@@ -6,6 +6,7 @@ from copy import deepcopy
 from icecream import ic
 
 from core.ast_visitors.visitor import Visitor
+from core import ast_nodes
 
 
 class ReturnInterrupt(Exception):
@@ -25,7 +26,8 @@ class Interpreter(Visitor):
             raise ValueError('Could not find main.')
 
         with symbol_table.enter_scope('globals'):
-            start.accept(self, symbol_table)
+            for stmt in start.body:
+                stmt.accept(self, symbol_table)
 
     def visitPrint(self, print_node, symbol_table):
         print_node.expr.accept(self, symbol_table)
@@ -40,7 +42,7 @@ class Interpreter(Visitor):
         assign_node.lhs.type = assign_node.rhs.type
         
 
-    def visitBinOp(self, bin_op_node, symbol_table):
+    def visitBinOp(self, bin_op_node: ast_nodes.BinOp, symbol_table):
         bin_op_node.lhs.accept(self, symbol_table)
         bin_op_node.rhs.accept(self, symbol_table)
         lhs_val = bin_op_node.lhs.value
@@ -66,6 +68,10 @@ class Interpreter(Visitor):
                     stmt.accept(self, symbol_table)
                 except ReturnInterrupt as RI:
                     call_node.value = RI.ret_val
+                    try:
+                        call_node.type = RI.ret_val.type
+                    except:
+                        call_node.type = RI.ret_val
                     break
 
 
@@ -108,8 +114,10 @@ class Interpreter(Visitor):
         raise NotImplementedError
 
     def visitFnType(self, fn_def_node, symbol_table):
-        for stmt in fn_def_node.body:
-            stmt.accept(self, symbol_table)
+        pass
+
+    def visitFnSignature(self, fn_sig_node, *args, **kwargs):
+        pass
 
     def visitLiteral(self, literal_node, symbol_table):
         raise NotImplementedError

@@ -24,7 +24,7 @@ bool fn(num arg, num arg2) {
     return arg == 0
 }
 
-void main() {
+num main() {
     k = 8
     for i in k {
         print(i)

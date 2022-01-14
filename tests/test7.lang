@@ -1,0 +1,18 @@
+// functional counter example
+
+fn[->num] makeCounter() {
+    i = 0
+    num count() {
+        i = i + 1
+        return i
+    }
+    return count
+}
+
+num main() {
+    counter = makeCounter()
+    for j in 5 {
+        print(counter())
+    }
+    return 0
+}

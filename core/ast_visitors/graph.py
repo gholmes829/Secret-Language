@@ -222,6 +222,11 @@ class GraphManager(Visitor):
 
         return fn_type_graph_node
 
+    def visitFnSignature(self, fn_sig_node, graph):
+        data = fn_sig_node.make_pydot_node(label = 'fn_signature')
+        graph.add_node(data)
+        return data
+
     def visitLiteral(self, literal_node, graph):
         data = literal_node.make_pydot_node(label = f'{ast_nodes.PrimitiveType.inv_data_types[literal_node.type]}_lit: "{literal_node.value}"')
         graph.add_node(data)

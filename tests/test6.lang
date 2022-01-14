@@ -1,6 +1,6 @@
 // fancy functional
 
-num f(num x) {
+fn[num -> num] f(num x) {
     num g(num y) {
         return x * y
     }
@@ -9,7 +9,9 @@ num f(num x) {
 
 num main() {
     h = f(2)
-    print(h(3))
+    for i in 5 {
+        print(h(i))
+    }
 
     return 0
 }

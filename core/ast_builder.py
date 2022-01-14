@@ -100,7 +100,15 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     for_stmt = ast_nodes.For
 
     def obj_type(self, scope_modifier, obj_type_token, execution_modifier):
-        return ast_nodes.PrimitiveType(scope_modifier, obj_type_token.value, execution_modifier)
+        if isinstance(obj_type_token, lark.Tree):
+            _, input_types, ret_type = obj_type_token.children
+            return ast_nodes.FnSignature(
+                scope_modifier,
+                (input_types.children if input_types else [], ret_type),
+                execution_modifier
+            )
+        else:
+            return ast_nodes.PrimitiveType(scope_modifier, obj_type_token.value, execution_modifier)
 
     def num(self, num_token):
         return ast_nodes.NumLit(float(num_token.value))
