@@ -38,10 +38,6 @@ class FnDef(Stmt):
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitFnDef(self, *args, **kwargs)
 
-def typed_formal(_, _type, _identifier):
-    _identifier.type = _type.type
-    return _identifier
-
 class Return(Stmt):
     def __init__(self, expr) -> None:
         super().__init__(expr.start_token, expr.end_token)
@@ -53,25 +49,9 @@ class Return(Stmt):
 
 
 class If(Stmt):
-    def __init__(self, if_block, else_if_blocks, else_block) -> None:
+    def __init__(self, if_sequence) -> None:
         super().__init__(None, None)
-        
-        self.if_sequence = []
-
-        if_cond = if_block.children[0]
-        if_body_stmts = if_block.children[1].children
-        
-        self.if_sequence.append((if_cond, if_body_stmts, 'if'))
-
-        if else_if_blocks:
-            for else_if_block in else_if_blocks.children:
-                else_if_cond = else_if_block.children[0]
-                else_if_body_stmts = else_if_block.children[1].children
-                self.if_sequence.append((else_if_cond, else_if_body_stmts, 'else if'))
-
-        if else_block:
-            else_body_stmts = else_block.children[0].children
-            self.if_sequence.append((None, else_body_stmts, 'else'))
+        self.if_sequence = if_sequence
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitIf(self, *args, **kwargs)
@@ -91,7 +71,7 @@ class For(Stmt):
 class While(Stmt):
     def __init__(self, condition, body) -> None:
         self.condition = condition
-        self.body = body.children if body else []
+        self.body = body
         super().__init__(None, None)
 
     def accept(self, visitor, *args, **kwargs):

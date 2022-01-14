@@ -60,7 +60,7 @@ class ID(Reference):
     def value(self, _value):
         self.symbol.value = _value
 
-class BinaryOperation(Expr):
+class BinOp(Expr):
     ops = {
         '+': (lambda lhs, rhs: lhs + rhs, 'addition'),
         '-': (lambda lhs, rhs: lhs - rhs, 'subtraction'),
@@ -95,10 +95,10 @@ class BinaryOperation(Expr):
         ('or', bool, bool): (bool, bool, bool),
     }
 
-    def __init__(self, lhs, op_token, rhs) -> None:
+    def __init__(self, lhs, operation, rhs) -> None:
         super().__init__(None, None)
-        self.op_str = op_token.value
-        self.op, self.op_name = BinaryOperation.ops[op_token.value]
+        self.op_str = operation
+        self.op, self.op_name = BinOp.ops[operation]
         self.lhs, self.rhs = lhs, rhs
 
     def accept(self, visitor, *args, **kwargs):
@@ -127,9 +127,8 @@ class Call(Expr):
 
 # literals
 class Literal(Expr):
-    def __init__(self, token, value, lit_type, *args, **kwargs) -> None:
+    def __init__(self, value, lit_type, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.token = token
         self._value = value
         self._type = lit_type
 
@@ -142,16 +141,16 @@ class Literal(Expr):
 # literals
 class NumLit(Literal):
     type = float
-    def __init__(self, num_token) -> None:
-        super().__init__(num_token, float(num_token.value), float, None, None)
+    def __init__(self, num) -> None:
+        super().__init__(num, float, None, None)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNumLit(self, *args, **kwargs)
 
 
 class StrLit(Literal):
-    def __init__(self, string_token: lark.Token) -> None:
-        super().__init__(string_token, string_token.value[1:-1], str, None, None)
+    def __init__(self, string: lark.Token) -> None:
+        super().__init__(string, str, None, None)
         self.type = str
 
     def accept(self, visitor, *args, **kwargs):
@@ -159,14 +158,8 @@ class StrLit(Literal):
 
 
 class BoolLit(Literal):
-    str_to_val = {
-        'true': True,
-        'false': False
-    }
-
-    def __init__(self, bool_token) -> None:
-        value = BoolLit.str_to_val[bool_token.value]
-        super().__init__(bool_token, value, bool, None, None)
+    def __init__(self, boolean) -> None:
+        super().__init__(boolean, bool, None, None)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitBoolLit(self, *args, **kwargs)

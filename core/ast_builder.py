@@ -2,6 +2,8 @@
 
 """
 
+# try to compose nodes as other nodes "desugar"
+
 import lark
 from icecream import ic
 
@@ -36,7 +38,6 @@ class AST:
             raise ValueError('Did not recieve any exit code...')
         
         return exit_code
-        
 
 
 @lark.v_args(inline=True)
@@ -46,28 +47,56 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     root = lambda _, *args, **kwargs: AST(ast_nodes.Root(*args, **kwargs))
 
-    fn_def = ast_nodes.FnDef
-    typed_formal = ast_nodes.typed_formal
-
-    scoped_id = simple_id = ast_nodes.ID
-
-    assign_stmt = ast_nodes.AssignStmt
-    
-    num = ast_nodes.NumLit
-    string = ast_nodes.StrLit
-    boolean = ast_nodes.BoolLit
-
-    user_fn_call = ast_nodes.Call
-    
     print_call = ast_nodes.Print
 
-    bin_op = ast_nodes.BinaryOperation
+    def bin_op(self, lhs, operation_token, rhs):
+        return ast_nodes.BinOp(lhs, operation_token.value, rhs)
+
+    def scoped_id(self, id_token):
+        return ast_nodes.ID(id_token.value)
+
+    simple_id = scoped_id
+
+    assign_stmt = ast_nodes.AssignStmt
+
+    fn_def = ast_nodes.FnDef
+
+    def typed_formal(self, type_node, id_node):
+        id_node.type = type_node.type
+        return id_node
+
+    user_fn_call = ast_nodes.Call
+
+    return_stmt = ast_nodes.Return
+    
+    def if_stmt(self, if_block, else_if_blocks, else_block):
+        if_sequence = [(if_block.children[0], if_block.children[1].children, 'if')]
+
+        if else_if_blocks:
+            for else_if_block in else_if_blocks.children:
+                else_if_cond = else_if_block.children[0]
+                else_if_body_stmts = else_if_block.children[1].children
+                if_sequence.append((else_if_cond, else_if_body_stmts, 'else if'))
+        
+        if else_block:
+            else_body_stmts = else_block.children[0].children
+            if_sequence.append((ast_nodes.BoolLit(True), else_body_stmts, 'else'))
+            
+        return ast_nodes.If(if_sequence)
+
+    def while_stmt(self, condition, body):
+        return ast_nodes.While(condition, body.children if body else [])
 
     for_stmt = ast_nodes.For
-    if_stmt = ast_nodes.If
-    while_stmt = ast_nodes.While
-    return_stmt = ast_nodes.Return
 
     obj_type = ast_nodes.ObjType
 
+    def num(self, num_token):
+        return ast_nodes.NumLit(float(num_token.value))
+
+    def string(self, str_token):
+        return ast_nodes.StrLit(str_token.value[1:-1])
+
+    def boolean(self, bool_token):
+        return ast_nodes.BoolLit({'true': True, 'false': False}[bool_token.value])
     
