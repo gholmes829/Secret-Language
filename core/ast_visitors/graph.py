@@ -7,6 +7,8 @@ import pydot
 from core.ast_visitors.visitor import Visitor
 from core import ast_nodes
 
+# for loop and maybe others need work
+
 
 class GraphManager(Visitor):
     def __init__(self) -> None:

@@ -6,7 +6,6 @@ from copy import deepcopy
 from icecream import ic
 
 from core.ast_visitors.visitor import Visitor
-from core import ast_nodes
 
 
 class ReturnInterrupt(Exception):

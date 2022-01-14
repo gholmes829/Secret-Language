@@ -1,0 +1,13 @@
+// triple for loop?
+
+num main() {
+    n = 25
+    for i in n {
+        for j in n {
+            for k in n {
+                print('(' + i + ', ' + j + ', ' + k + ')')
+            }
+        }
+    }
+    return 0
+}

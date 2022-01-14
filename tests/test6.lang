@@ -1,0 +1,15 @@
+// fancy functional
+
+num f(num x) {
+    num g(num y) {
+        return x * y
+    }
+    return g
+}
+
+num main() {
+    h = f(2)
+    print(h(3))
+
+    return 0
+}
