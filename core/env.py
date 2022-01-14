@@ -2,6 +2,12 @@
 
 """
 
+# add fixed hook to access globals
+# rethink fn definition: num fn(num a) { return a * 2 } === var fn = (num a) => { return a } 
+# ^ in other words, leverage function object-ness
+# for fn calls, each fn call gets own env to protect recursions
+# need to add None type
+
 import abc
 
 class SemSymbol(metaclass = abc.ABCMeta):
