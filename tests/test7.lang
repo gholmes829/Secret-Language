@@ -1,4 +1,4 @@
-// functional counter example
+# functional counter example
 
 fn[->num] makeCounter() {
     let i = 0

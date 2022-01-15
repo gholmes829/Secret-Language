@@ -84,9 +84,9 @@ globals: global*
     | expr ("and" | "&&") term -> bin_op
     | expr ("or" | "||") term -> bin_op
     | expr ("xor" | "^^") term -> bin_op
-    | expr ("&") term -> bin_op
-    | expr ("|") term -> bin_op
-    | expr ("^") term -> bin_op
+    | expr "&" term -> bin_op
+    | expr "|" term -> bin_op
+    | expr "^" term -> bin_op
     | expr "==" term -> bin_op
     | expr "!=" term -> bin_op
     | expr ">" term -> bin_op
@@ -94,7 +94,7 @@ globals: global*
     | expr "<" term -> bin_op
     | expr "<=" term -> bin_op
     | expr "?" expr ":" expr -> ternary
-    | expr "if" expr ("else" expr "if" expr)* "else" expr
+    | "(" expr "if" expr ("else" expr "if" expr)* "else" expr ")"
     | expr "where" scoped_id "=" expr
     | ("not" | "!") expr -> l_not
     | "-" term -> negate
@@ -111,8 +111,8 @@ globals: global*
     | anon_fn
     | scoped_id
 
-lval: scoped_id [index+] | fn_call index+
-index: "[" expr ("," expr)* "]"
+//lval: scoped_id [index+] | fn_call index+
+//index: "[" expr ("," expr)* "]"
 
 // control statements
 ?ctrl_stmt: branch [else_branches] [else] -> if_stmt
@@ -140,7 +140,7 @@ else: "else" "{" body "}"
 branch: ("if" | "unless") (expr | walrus_assign) "{" body "}"
 
 // assign statements
-assign_decl_stmt: LET [mutability_modifier] [scope_modifier] [execution_modifier] simple_id "=" expr
+assign_decl_stmt: "let" [mutability_modifier] [scope_modifier] [execution_modifier] simple_id "=" expr
 assign_stmt: scoped_id "=" expr
 
 // body stmt
@@ -163,7 +163,7 @@ actuals: actual ("," actual)*
 actual: expr | simple_id "=" expr
 
 // typing
-?obj_type: basic_type [execution_modifier]
+?obj_type: basic_type [execution_modifier]  // should this also be prepended w scope modifier?
 ?basic_type: BOOL | NUM | STR | NULL | fn_type | scoped_id
 ?fn_type: FN "[" [anon_inputs] "->" obj_type "]"
 
@@ -187,20 +187,18 @@ BOOL: "bool"
 NUM: "num"
 STR: "str"
 NULL: "null"
-LET: "let"
 BREAK: "break"
 CONTINUE: "continue"
 INF: "inf"
 NINF: "ninf"
 PRINT: "print"
 
+COMMENT: /#[^\n]*/
 
 %import common.CNAME
 %import common._STRING_ESC_INNER -> STRING_INNER
 %import common.SIGNED_NUMBER
 %import common.WS
 
-%import common.CPP_COMMENT
-
 %ignore WS
-%ignore CPP_COMMENT
+%ignore COMMENT

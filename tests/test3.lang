@@ -1,3 +1,5 @@
+# lets calculate some basic Fibonacci sequence!
+
 num fib(num arg) {
     if arg <= 0 {
         return 0

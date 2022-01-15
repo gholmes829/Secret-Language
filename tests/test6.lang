@@ -1,4 +1,4 @@
-// fancy functional
+# fancy functional
 
 fn[num -> num] f(num x) {
     num g(num y) {

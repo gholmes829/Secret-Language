@@ -1,4 +1,4 @@
-// basic main test
+# basic main test
 
 num main() {
     let x = 10

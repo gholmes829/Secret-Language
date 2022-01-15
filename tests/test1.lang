@@ -1,7 +1,8 @@
 
-bool fn(num arg, num arg2) {
+bool f(num arg, num arg2) {
     let l1 = 3
     let l2 = 5 * l1
+    # comment here
     if l2 < l1 {
         let l3 = arg
         print(l3)
@@ -28,7 +29,7 @@ num main() {
     let k = 8
     for i in k {
         print(i)
-        while (fn(i + 2, 5) and true) {
+        while (f(i + 2, 5) and true) {
             i = i - 1
             main()
         }

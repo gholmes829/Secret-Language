@@ -1,0 +1,9 @@
+
+
+num main() {
+    var = 1
+    if true {
+        print(1)
+    }
+    return 0
+}

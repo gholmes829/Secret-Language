@@ -34,6 +34,9 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         assign_node = ast_nodes.AssignStmt(identifier, expr)
         return assign_node
 
+    def assign_decl_stmt(self, mutability_modifier, scope_modifier, execution_modifier, identifier, expr):
+        return ast_nodes.AssignStmt(identifier, expr)  # TODO: add remaining info in new class
+
     def fn_def(self, decorator, ret_type, identifier, formals, body):
         fn_type = ast_nodes.FnType(
             decorator,
@@ -73,7 +76,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
             
         return ast_nodes.If(if_sequence)
 
-    def while_stmt(self, condition, body):
+    def loop_stmt(self, condition, body, else_block):
         return ast_nodes.While(condition, body.children if body else [])
 
     def for_stmt(self, identifier, iterable, body, else_block):
@@ -83,6 +86,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         if isinstance(obj_type_token, lark.Tree):
             _, input_types, ret_type = obj_type_token.children
             return ast_nodes.FnSignature(
+                None,
                 (input_types.children if input_types else [], ret_type),
                 execution_modifier
             )

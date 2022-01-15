@@ -1,4 +1,4 @@
-// basic conditionals
+# basic conditionals
 
 num main() {
     if true {
