@@ -2,11 +2,8 @@
 
 """
 
-# add fixed hook to access globals
-# for fn calls, each fn call gets own env to protect recursions
-# need to add None type
-
 import abc
+from icecream import ic
 
 class SemSymbol(metaclass = abc.ABCMeta):
     def __init__(self) -> None:

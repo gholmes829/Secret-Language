@@ -1,38 +1,101 @@
+// Still need to add (key language):
+// ==================
+// concurrency/ async
+// Pattern matching
+// List/ dict/ set comprehension (indexing in general)
+// next and whatever else to support range-based iteration
+// specify if overriding, implementing interfaces
+// F string and string formatting/ templating
+// Variable unpacking
+// enable commas, parens in for loop
+// *, ** like in Python
+// expr or expr (like Python)
+// specify if pure to enable optimizations (?)
+// Entry keyword to designate starting fn (as opposed to num main() { return 0 })
+// using () and \ to allow multiple line spacing
+// make sure ((inner) => {})(arg) like in JS
+
+// Tentative:
+// ======================
+// do something w semicolons??
+// do something w $??
+// do something w #??
+// auto keyword for type inference when dealing with pure fns or smth (??)
+// default baked in math consts like pi, e?
+// Pipes and redirection?? (maybe displace || for or? maybe bake into using | operators?)
+
+// Tools:
+// ========================
+// line inspection like tools
+// stuff like __line__ and __file__
+// size kw to get size of object
+
+// Done: (yay!)
+// ========================
+// Xor logic operator \DONE!
+// keyword arguments
+// module, floor division, exponent
+// Ternary expr
+// python "var = expr if cond else expr"
+// bitwise or + and + xor
+// for else, while else loops
+// inf, ninf, (nan?) keywords
+// Context managers (with, as)
+// throw exceptions (try, catch, finally, else, throw)
+// anon fns
+// where deferment
+// In place walrus assignment
+// let indexes work like [2, 4, 1]
+
 // start
 root: globals
 
-globals: global*
-
 // globals
+globals: global*
 ?global: import_stmt
+    | assign_decl_stmt
+    | fn_def
+    | cls_def
+
+// temp built in for testing
+?print_call: PRINT "(" expr ")"
+
+// stmt
+?stmt: assign_decl_stmt
     | assign_stmt
     | fn_def
     | cls_def
-
-// definitions
-?decorator: "@" (scope_modifier | fn_call)
-
-// stmt
-?stmt: assign_stmt
-    | fn_def
-    | cls_def
     | ctrl_stmt
+    | context_manager
+    | try_catch_stmt
+    | throw_stmt
     | import_stmt
+    | print_call
     | fn_call
 
 // expr
 ?!expr: expr "-" term -> bin_op
     | expr "+" term -> bin_op
     | expr "*" term -> bin_op
+    | expr "//" term -> bin_op
     | expr "/" term -> bin_op
+    | expr "%" term -> bin_op
+    | expr "**" term -> bin_op
     | expr ("and" | "&&") term -> bin_op
     | expr ("or" | "||") term -> bin_op
+    | expr ("xor" | "^^") term -> bin_op
+    | expr ("&") term -> bin_op
+    | expr ("|") term -> bin_op
+    | expr ("^") term -> bin_op
     | expr "==" term -> bin_op
     | expr "!=" term -> bin_op
     | expr ">" term -> bin_op
     | expr ">=" term -> bin_op
     | expr "<" term -> bin_op
     | expr "<=" term -> bin_op
+    | expr "?" expr ":" expr -> ternary
+    | expr "if" expr ("else" expr "if" expr)* "else" expr
+    | expr "where" scoped_id "=" expr
     | ("not" | "!") expr -> l_not
     | "-" term -> negate
     | term
@@ -41,66 +104,73 @@ globals: global*
 ?term: NUMBER -> num
     | STRING -> string
     | BOOLEAN -> boolean
+    | NINF -> neg_inf
+    | INF -> inf
     | "(" expr ")"
-    | user_fn_call
+    | fn_call
+    | anon_fn
     | scoped_id
 
-// fun calls
-?fn_call: std_fn_call | user_fn_call
-
-?std_fn_call: "print" "(" expr ")" -> print_call
-    | "input" "(" expr ")" -> input_call
-    | "assert" "(" expr ")" -> assert_call
+lval: scoped_id [index+] | fn_call index+
+index: "[" expr ("," expr)* "]"
 
 // control statements
-?ctrl_stmt: if [else_ifs] [else] -> if_stmt
-    //| unless else_unless* [elses] -> unless_stmt
-    | "while" expr "{" body "}" -> while_stmt
-    | "until" expr "{" body "}" -> until_stmt
-    | "for" simple_id "in" expr "{" body "}" -> for_stmt
-    | "return" expr -> return_stmt
+?ctrl_stmt: branch [else_branches] [else] -> if_stmt
+    | ("while" | "until") (expr | walrus_assign) "{" loop_body "}" [else] -> loop_stmt
+    | "for" simple_id ("in" | ":") expr "{" loop_body "}" [else] -> for_stmt
+    | "return" expr -> return_stmt  // TODO: need to make return expr optional, return null or whatev in this case
+
+walrus_assign: "(" scoped_id ":=" expr ")"
+
+// try catch
+try_catch_stmt: "try" body ("catch" body)+ ["finally" "{" body "}" | else]
+throw_stmt: "throw" scoped_id ["as" scoped_id]
+
+// context manager
+context_manager: "with" expr ["as" scoped_id] "{" body "}"
 
 // import statements
-import_stmt: "from" scoped_id "import" imported_object+
+import_stmt: "from" scoped_id "import" imported_object ("," imported_object)*
 imported_object: scoped_id ["as" simple_id]
 
 // control statements
-else_ifs.1: else_if*
-else_if: _ELSE_IF expr "{" body "}"
+else_branches.1: else_branch*
+else_branch: _ELSE_BRANCH (expr | walrus_assign) "{" body "}"
 else: "else" "{" body "}"
-if: "if" expr "{" body "}"
-
-unless: "unless" expr "{" body "}"
-else_unless: "else" "unless" expr "{" body "}"
+branch: ("if" | "unless") (expr | walrus_assign) "{" body "}"
 
 // assign statements
+assign_decl_stmt: LET [mutability_modifier] [scope_modifier] [execution_modifier] simple_id "=" expr
 assign_stmt: scoped_id "=" expr
 
 // body stmt
 body: stmt*
+loop_body: (stmt | BREAK | CONTINUE)*
 
 // definitions
-cls_def: [decorator] "class" simple_id ["(" scoped_id ")"] "{" fn_def* "}"
-
+?decorator: "@" (scoped_id | fn_call)
+cls_def: [decorator] "class" simple_id ["(" scoped_id ")"] "{" (fn_def | assign_decl_stmt)* "}"
 fn_def: [decorator] obj_type simple_id "(" [formals] ")" "{" body "}"
 formals: typed_formal ("," typed_formal)*
 typed_formal: obj_type simple_id
 
+// anon fns
+anon_fn: "(" formals ")" "=>" basic_type "{" body "}"
+
 // fn calls
-user_fn_call: scoped_id ("(" [actuals] ")")+
-actuals: expr ("," expr)*
+fn_call: scoped_id ("(" [actuals] ")")+
+actuals: actual ("," actual)*
+actual: expr | simple_id "=" expr
 
 // typing
-?obj_type: [scope_modifier] pure_type [execution_modifier]
-
-?pure_type: BOOL | NUM | STR | NULL | fn_type | scoped_id
-
+?obj_type: basic_type [execution_modifier]
+?basic_type: BOOL | NUM | STR | NULL | fn_type | scoped_id
 ?fn_type: FN "[" [anon_inputs] "->" obj_type "]"
 
 anon_inputs: obj_type ("," obj_type)*
 
-?!scope_modifier: "static"
-
+?!mutability_modifier: "const"
+?!scope_modifier: "static" | "global"
 ?!execution_modifier: "channel"
 
 // ids
@@ -108,7 +178,7 @@ scoped_id: CNAME ("." CNAME)*
 simple_id: CNAME
 
 // terminals
-_ELSE_IF.1: /else[ \t\f]+if/
+_ELSE_BRANCH.1: /else[ \t\f]+(if|unless)/
 BOOLEAN.1: "true" | "false"
 STRING: (("\"" STRING_INNER "\"") | ("'" STRING_INNER "'"))
 NUMBER: SIGNED_NUMBER
@@ -117,6 +187,12 @@ BOOL: "bool"
 NUM: "num"
 STR: "str"
 NULL: "null"
+LET: "let"
+BREAK: "break"
+CONTINUE: "continue"
+INF: "inf"
+NINF: "ninf"
+PRINT: "print"
 
 
 %import common.CNAME

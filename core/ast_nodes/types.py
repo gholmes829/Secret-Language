@@ -23,10 +23,9 @@ class PrimitiveType(ObjectType):
 
     inv_data_types = {v: k for k, v in data_types.items()}
 
-    def __init__(self, scope_modifier, value, execution_modifier) -> None:
+    def __init__(self, value, execution_modifier) -> None:
         super().__init__(None, None)
         self.type = PrimitiveType.data_types[value]
-        self.scope_modifier = scope_modifier
         self.execution_modifier = execution_modifier
 
     def accept(self, visitor, *args, **kwargs):

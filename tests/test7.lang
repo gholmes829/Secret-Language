@@ -1,7 +1,7 @@
 // functional counter example
 
 fn[->num] makeCounter() {
-    i = 0
+    let i = 0
     num count() {
         i = i + 1
         return i
@@ -10,7 +10,7 @@ fn[->num] makeCounter() {
 }
 
 num main() {
-    counter = makeCounter()
+    let counter = makeCounter()
     for j in 5 {
         print(counter())
     }

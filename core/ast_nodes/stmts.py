@@ -45,11 +45,12 @@ class If(Stmt):
 
 
 class For(Stmt):
-    def __init__(self, identifier, iterable, body) -> None:
+    def __init__(self, identifier, iterable, body, else_block) -> None:
         super().__init__(None, None)
         self.identifier = identifier
         self.iterable = iterable
         self.body = body.children if body else []
+        self.else_block = else_block
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitFor(self, *args, **kwargs)

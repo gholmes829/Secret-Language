@@ -5,10 +5,9 @@
 from icecream import ic
 
 from core.ast_visitors.visitor import Visitor
-from core import env
 
 
-class Binder(Visitor):
+class SemanticAnalyzer(Visitor):
     def __init__(self) -> None:
         super().__init__()
 

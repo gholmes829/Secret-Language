@@ -8,7 +8,7 @@ fn[num -> num] f(num x) {
 }
 
 num main() {
-    h = f(2)
+    let h = f(2)
     for i in 5 {
         print(h(i))
     }

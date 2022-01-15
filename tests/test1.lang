@@ -1,17 +1,17 @@
 
 bool fn(num arg, num arg2) {
-    l1 = 3
-    l2 = 5 * l1
+    let l1 = 3
+    let l2 = 5 * l1
     if l2 < l1 {
-        l3 = arg
+        let l3 = arg
         print(l3)
     }
     else if l2 > l1 {
-        l3 = arg2
+        let l3 = arg2
         print(l3)
     }
     else if l2 == l1 {
-        l3 = 1
+        let l3 = 1
         print(l3)
     }
     else {
@@ -25,7 +25,7 @@ bool fn(num arg, num arg2) {
 }
 
 num main() {
-    k = 8
+    let k = 8
     for i in k {
         print(i)
         while (fn(i + 2, 5) and true) {
