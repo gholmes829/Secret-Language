@@ -22,6 +22,10 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def visitAssignDecl(self, assign_node, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
     def visitAssign(self, assign_node, *args, **kwargs):
         raise NotImplementedError
 
@@ -54,11 +58,11 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def visitFnType(self, fn_def_node, *args, **kwargs):
+    def visitFnObj(self, fn_def_node, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
-    def visitFnSignature(self, fn_sig_node, *args, **kwargs):
+    def visitFnType(self, fn_sig_node, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod

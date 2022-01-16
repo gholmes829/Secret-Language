@@ -8,9 +8,14 @@ When used as a lark transformer, this class defines how the AST nodes are built.
 
 import lark
 from icecream import ic
+from pydot import Node
 
 from core.ast_manager import AST
 from core.ast_nodes import *
+
+
+def make_collector(*args, type_ = NodeList):
+    return lambda _, meta, *items: type_(meta, items, *args)
 
 
 @lark.v_args(wrapper = lambda fn, rule_token, children, meta: fn(meta, *children))
@@ -19,16 +24,14 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         super().__init__()
 
     # GLOBALS
-    # =======
     root = lambda _, *args: AST(Root(*args))
-    globals = lambda _, meta, *globals: NodeList(meta, globals, 'globals')
+    globals = make_collector('globals')
 
     # STATEMENTS
-    # ==========
     print_call = Print
 
     # control
-    branch = lambda _, meta, *branches: If(meta, branches)
+    branch = make_collector(type_ = If)
 
     def primary_branch(self, meta, supposition_kw, cond, block):
         if supposition_kw == 'unless':
@@ -37,7 +40,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
             assert supposition_kw == "if"
             true_cond = cond
         meta.supposition_kw = supposition_kw
-        return Branch(meta, true_cond, block)
+        return Branch(meta, true_cond, block, supposition_kw)
 
     secondary_branch = lambda self, *args: self.primary_branch(*args)
 
@@ -54,22 +57,24 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     return_ = lambda _, meta, expr: Return(meta, expr or None_(meta))
 
     # assignment
-    assign_decl_stmt = AssignDeclStmt
-    assign_stmt = AssignStmt
+    assign_decl_stmt = AssignDecl
+    assign_stmt = Assign
 
     # definition
-    def fn_def(self, meta, decorator, generics, ret_type, identifier, formals, body):
+    def fn_def(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, identifier, formals, body):
         fn_obj = FnObj(
             meta,
             decorator,
             generics,
+            mutability_mod,
+            scope_mod,
             ret_type,
-            formals,
+            formals or NodeList(meta, [], 'formals'),
             body
         )
-        return AssignStmt(meta, identifier, fn_obj)
+        return Assign(meta, identifier, fn_obj)
 
-    formals = lambda _, meta, *formals: NodeList(meta, formals, 'formals')
+    formals = make_collector('formals')
 
     def formal(self, meta, type_node, id_node):
         id_node.type = type_node.type
@@ -82,17 +87,16 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         body.meta = meta
         return body
 
-    body = lambda _, meta, *stmts: NodeList(meta, stmts, 'body')
-    loop_body = lambda _, meta, *stmts: NodeList(meta, stmts, 'loop_body')
+    body = make_collector('body')
+    loop_body = make_collector('loop_body')
 
     # TYPING
-    # ======
     def type_(self, meta, type_token, execution_modifier):
         if isinstance(type_token, lark.Tree):
             print('What a strange instance...')
             input('Input: you said you wanted to check this out...')
             _, input_types, ret_type = type_token.children
-            return FnSignature(
+            return FnType(
                 meta,
                 None,
                 (input_types.children if input_types else [], ret_type),
@@ -102,24 +106,19 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
             return PrimitiveType(meta, type_token, execution_modifier)
 
     # EXPRESSIONS
-    # ===========
     bin_op = BinOp
 
     def paren_expr(self, meta, inner):
         inner.meta = meta
         return inner
 
-
     # identifiers
     scoped_id = simple_id = ID
 
     # call
     call = lambda _, meta, id_, *actuals: Call(meta, id_, actuals)
-    actuals = lambda _, meta, *actuals: NodeList(meta, actuals, 'actuals')
-    kwarg = AssignStmt
+    actuals = make_collector('actuals')
+    kwarg = Assign
 
     # literals
-    NUMBER = NumLit
-    STRING = StrLit
-    BOOLEAN = BoolLit
-    NONE = None_
+    NUMBER, STRING, BOOLEAN, NONE = NumLit, StrLit, BoolLit, None_

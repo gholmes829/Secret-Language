@@ -32,17 +32,16 @@ class PrimitiveType(ObjectType):
         return visitor.visitPrimitiveType(self, *args, **kwargs)
 
 
-class FnSignature(ObjectType):
-    def __init__(self, scope_modifier, signature, execution_modifier) -> None:
+class FnType(ObjectType):
+    def __init__(self, mutability_mod, scope_mod, ret_type, formal_types) -> None:
         self.identifier = str(id(self))
-        self.scope_modifier = scope_modifier
-        self.signature = signature
-        self.execution_modifier = execution_modifier
-        self.type = self
-        self.formal_types, self.ret_type = self.signature
+        self.mutability_mod = mutability_mod
+        self.scope_modifier = scope_mod
+        self.ret_type = ret_type
+        self.formal_types = formal_types
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnSignature(self, *args, **kwargs)
+        return visitor.visitFnType(self, *args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'<fn_signature at {id(self)}>'
+        return f'<"fn_type" at {id(self)}>'

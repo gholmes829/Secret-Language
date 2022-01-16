@@ -21,11 +21,11 @@ class GraphManager(Visitor):
     def visitRoot(self, root_node, graph):
         root_graph_node = root_node.make_pydot_node(label = 'root')
         graph.add_node(root_graph_node)
-        stmt_nodes = [stmt.accept(self, graph) for stmt in root_node.stmts]
+        global_nodes = [glbl.accept(self, graph) for glbl in root_node.globals]
         
-        for stmt_node in stmt_nodes:
-            assert root_graph_node and stmt_node
-            graph.add_edge(pydot.Edge(root_graph_node, stmt_node))
+        for global_node in global_nodes:
+            assert root_graph_node and global_node
+            graph.add_edge(pydot.Edge(root_graph_node, global_node))
 
         return root_graph_node
 

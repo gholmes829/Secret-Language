@@ -171,7 +171,7 @@ definition: cls_def | fn_def
 cls_def: [decorator] [generics] "class" simple_id ["(" scoped_id ")"] "{" (fn_def | assign_decl)* "}"
 
 // functions
-fn_def: [decorator] [generics] type_ simple_id "(" [formals] ")" block
+fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
 formals: formal ("," formal)*
 formal: type_ simple_id
 
@@ -204,7 +204,7 @@ types: type_ ("," type_)*
 // shared
 parameterization: "<" types ">"
 
-parameterized_object_type:object_type [parameterization]
+parameterized_object_type: object_type [parameterization]
     //| container_type [parameterization] -> parameterized_container_type  // might not be needed it treating construction as builtin
 
 ?!mutability_modifier: "const"
@@ -221,7 +221,7 @@ parameterized_object_type:object_type [parameterization]
 object_type: fn_type
     | scoped_id
 
-?fn_type: "(" "[" [types] "]" "->" type_ ")"  // change this to align w py typing module
+?fn_type: [mutability_modifier] [scope_modifier] "(" "[" [types] "]" "->" type_ ")"  // change this to align w py typing module
 
 // container types  // might not be needed it treating construction as builtin
 // container_type: "set" | "dict" | "tuple"

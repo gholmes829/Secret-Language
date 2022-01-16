@@ -6,12 +6,13 @@ import lark
 from icecream import ic
 
 from core.ast_nodes.node import ASTNode
+from core.ast_nodes.types import FnType
 
-# expressions
+
 class Expr(ASTNode):
     dot_node_kwargs = ASTNode.dot_node_kwargs | dict(fillcolor='darksalmon')
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, meta) -> None:
+        super().__init__(meta)
         self._value = None
         self._type = None
 
@@ -32,48 +33,10 @@ class Expr(ASTNode):
         self._type = type
 
 
-# references
-class Reference(Expr):
-    dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgoldenrod', shape='rectangle')
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-class ID(Reference):
-    def __init__(self, meta, token) -> None:
-        super().__init__(meta)
-        self.name = token.value
-        self.symbol = None
-
-    def accept(self, visitor, *args, **kwargs):
-        return visitor.visitID(self, *args, **kwargs)
-
-    @property
-    def value(self):
-        return self.symbol.value
-
-    @value.setter
-    def value(self, _value):
-        self.symbol.value = _value
-
-    @property
-    def type(self):
-        if self.symbol:
-            return self.symbol.type
-        else:
-            return self._type
-
-    @type.setter
-    def type(self, type):
-        self._type = type
-        if self.symbol:
-            self.symbol.type = type
-
-    def __repr__(self) -> str:
-        return f'<ID "{self.name}" at {id(self)}>'
-
+# operations
 class UnaryOp(Expr):
-    def __init__(self, token, operation, operand) -> None:
-        super().__init__(token)
+    def __init__(self, meta, operation, operand) -> None:
+        super().__init__(meta)
         self.operation = operation
         self.operand = operand
     
@@ -124,12 +87,11 @@ class BinOp(Expr):
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitBinOp(self, *args, **kwargs)
 
-
+# fn calls
 class Call(Expr):
     def __init__(self, meta, identifier, actuals) -> None:
         super().__init__(meta)
         self.identifier = identifier
-        self.type = None
         self.actuals = actuals
         self.values = []
 
@@ -145,11 +107,29 @@ class Call(Expr):
         self.values.append(value)
 
 
+# references
+class Reference(Expr):
+    dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgoldenrod', shape='rectangle')
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+class ID(Reference):
+    def __init__(self, meta, id_token) -> None:
+        super().__init__(meta)
+        self.name = id_token.value
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitID(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<ID "{self.name}" at {id(self)}>'
+
+
 # literals
 class Literal(Expr):
     dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgreen', shape='diamond')
-    def __init__(self, meta, value, lit_type) -> None:
-        super().__init__(meta)
+    def __init__(self, token, value, lit_type) -> None:
+        super().__init__(token)
         self.value = value
         self.type = lit_type
 
@@ -184,26 +164,35 @@ class BoolLit(Literal):
 
 class None_(Literal):
     def __init__(self, token) -> None:
-        super().__init__(token, token, bool)
+        super().__init__(token, token, None)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNoneLit(self, *args, **kwargs)
 
-class FnObj(Literal):  # inherit from new Obj (differentiate primative from obj maybe)
-    def __init__(self, meta, decorator, generics, ret_type, formals, body) -> None:
+
+# object values
+class Object(Expr):
+    def __init__(self, meta, obj_type) -> None:
         super().__init__(meta)
-        self.identifier = str(id(self))
-        self.generics = generics
-        self.decorator = decorator
-        self.ret_type = ret_type
-        self.formals = formals
-        self.body = body
-        self.type = self
-        self.value = self
-        self.symbol = None
+        self.type = obj_type
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnType(self, *args, **kwargs)
+        raise NotImplementedError
+
+
+class FnObj(Object):  # inherit from new Obj (differentiate primative from obj maybe)
+    def __init__(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, formals, body) -> None:
+        super().__init__(meta, FnType(mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
+        self.identifier = str(id(self))
+        self.generics = generics
+        self.mutability_mod = mutability_mod
+        self.scope_mod = scope_mod
+        self.decorator = decorator
+        self.formals = formals
+        self.body = body
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitFnObj(self, *args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'<fn_type at {id(self)}>'
+        return f'<"fn_obj" at {id(self)}>'

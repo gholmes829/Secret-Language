@@ -18,6 +18,7 @@ class AST:
     def __init__(self, root) -> None:
         self.root = root
         self.symbol_table = sa.SymbolTable()
+        print(self.unparsed())
         self.root.accept(SA(), self.symbol_table)
 
     def unparsed(self):

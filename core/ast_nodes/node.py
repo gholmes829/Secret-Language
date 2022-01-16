@@ -10,9 +10,9 @@ from icecream import ic
 # abstractions
 class ASTNode(metaclass = ABCMeta):
     dot_node_kwargs = dict()
-    def __init__(self, token) -> None:
-        self.token = token
-        # ic(token.type, token.value)
+    def __init__(self, meta) -> None:
+        self.meta = meta
+        # ic(meta.type, meta.value)
         # input('\n\n\n')
 
     @abstractmethod
@@ -27,8 +27,8 @@ class ASTNode(metaclass = ABCMeta):
 
 # root of program
 class Root(ASTNode):
-    def __init__(self, token, globals) -> None:
-        super().__init__(token)
+    def __init__(self, meta, globals) -> None:
+        super().__init__(meta)
         self.globals = globals
 
     def accept(self, visitor, *args, **kwargs):
@@ -39,13 +39,16 @@ class Root(ASTNode):
 
 
 class NodeList(ASTNode):
-    def __init__(self, token, nodes, nodes_type) -> None:
-        super().__init__(token)
+    def __init__(self, meta, nodes, list_name) -> None:
+        super().__init__(meta)
         self.nodes = nodes
-        self.nodes_type = nodes_type
+        self.list_name = list_name
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNodeList(self, *args, **kwargs)
 
+    def __iter__(self):
+        return self.nodes.__iter__()
+
     def __repr__(self):
-        return f'<"{self.nodes_type}" list obj at {id(self)}>'
+        return f'<"{self.list_name}" list obj at {id(self)}>'
