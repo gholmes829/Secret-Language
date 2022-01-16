@@ -5,7 +5,6 @@
 // basic templating to specify type (like python typing)
 // concurrency/ async
 // Pattern matching
-// List/ dict/ set comprehension (indexing in general)
 // Other built in types (?): hex, list, dict, set, tuple
 // next and whatever else to support range-based iteration
 // specify if overriding, implementing interfaces
@@ -13,20 +12,22 @@
 // enable commas, parens in for loop
 // binary, hex, byte literals?
 // *, ** like in Python
-// expr or expr (like Python)
+// Pipes and redirection?? use |> as operator perhaps
+// expr or expr (like Python) (might just be a matter of overloading or method between types?)
 // specify if pure to enable optimizations (?)
 // Entry keyword to designate starting fn (as opposed to num main() { return 0 })
 // using () and \ to allow multiple line spacing
 // make sure ((inner) => {})(arg) like in JS
 // allow assigning to lambda fn i.e. num func = (num arg) -> num {}
-// allow user to parameterize their classes with <>? as generic?
-// should there be an Any type?
 // haskell function call pattern matching?
 // function overloading (an alternative to generics?)
-// should "as" keyword be more generalized?
-// should there be an "Any" type?
 // assign built-in that sets attribute and returns var that got modified
 // generators
+// https://medium.com/@kasperpeulen/10-features-from-various-modern-languages-that-i-would-like-to-see-in-any-programming-language-f2a4a8ee6727:
+// implicit name ("it") for single param lambda functions
+// cascade / spread operator? (merge objects)
+// automatic currying (https://reasonml.github.io/docs/en/function.html#currying)
+// function and class extensions
 
 // Tentative:
 // ======================
@@ -35,9 +36,9 @@
 // do something w #??
 // auto keyword for type inference when dealing with pure fns or smth (??)
 // default baked in math consts like pi, e?
-// Pipes and redirection?? (maybe displace || for or? maybe bake into using | operators?)
 // add structs?
 // could theoretically make fn return type implicit (prob don't want to tho)
+// could maybe be an "Any" type? Prob not tho...
 
 // Tools:
 // ========================
@@ -63,6 +64,9 @@
 // In place walrus assignment
 // let indexes work like [2, 4, 1]
 // Variable unpacking
+// List/ dict/ set comprehension (indexing in general) (I think this works??)
+// allow user to parameterize their classes with <>? as generic?
+// should "as" keyword be more generalized?
 
 %import common.SIGNED_NUMBER
 %import common._STRING_ESC_INNER -> STRING_INNER

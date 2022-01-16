@@ -183,7 +183,7 @@ class GraphManager(Visitor):
         graph.add_node(num)
         return num
 
-    def visitFnType(self, fn_type_node, graph):
+    def visitFnObj(self, fn_type_node, graph):
         # fn def
         fn_type_graph_node = fn_type_node.make_pydot_node(label = f'FnType')
         graph.add_node(fn_type_graph_node)
@@ -222,8 +222,8 @@ class GraphManager(Visitor):
 
         return fn_type_graph_node
 
-    def visitFnSignature(self, fn_sig_node, graph):
-        data = fn_sig_node.make_pydot_node(label = 'fn_signature')
+    def visitFnType(self, fn_sig_node, graph):
+        data = fn_sig_node.make_pydot_node(label = 'fn_type')
         graph.add_node(data)
         return data
 
@@ -240,3 +240,6 @@ class GraphManager(Visitor):
 
     def visitBoolLit(self, bool_lit_node, graph):
         return super(ast_nodes.BoolLit, bool_lit_node).accept(self, graph)
+
+    def visitNone(self, none_node, graph):
+        return super(ast_nodes.None_, none_node).accept(self, graph)

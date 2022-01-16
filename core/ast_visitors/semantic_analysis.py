@@ -110,7 +110,6 @@ class SemanticAnalyzer(Visitor):
     def visitFnType(self, fn_sig_node, symbol_table):
         pass
 
-
     def visitLiteral(self, literal_node, symbol_table):
         raise NotImplementedError
 
@@ -121,4 +120,7 @@ class SemanticAnalyzer(Visitor):
         pass
 
     def visitBoolLit(self, bool_lit_node, symbol_table):
+        pass
+
+    def visitNone(self, none_node, symbol_table):
         pass
