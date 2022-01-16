@@ -18,37 +18,18 @@ class PrimitiveType(ObjectType):
         'num': float,
         'str': str,
         'bool': bool,
-        'void': None,
+        'none': None,
     }
 
     inv_data_types = {v: k for k, v in data_types.items()}
 
-    def __init__(self, value, execution_modifier) -> None:
-        super().__init__(None, None)
+    def __init__(self, base_token, value, execution_modifier) -> None:
+        super().__init__(base_token)
         self.type = PrimitiveType.data_types[value]
         self.execution_modifier = execution_modifier
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitPrimitiveType(self, *args, **kwargs)
-
-
-class FnType(ObjectType):
-    def __init__(self, decorator, ret_type, formals, body) -> None:
-        super().__init__(None, None)
-        self.identifier = str(id(self))
-        self.decorator = decorator
-        self.ret_type = ret_type
-        self.formals = formals
-        self.body = body
-        self.type = self
-        self.value = self
-        self.symbol = None
-
-    def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnType(self, *args, **kwargs)
-
-    def __repr__(self) -> str:
-        return f'<fn_type at {id(self)}>'
 
 
 class FnSignature(ObjectType):

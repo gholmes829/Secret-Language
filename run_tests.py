@@ -11,17 +11,17 @@ ROOT_PATH = osp.basename(osp.realpath(__file__))
 TEST_PATH = osp.join(ROOT_PATH, 'tests')
 
 def main():
-    tests = [f'test{i}' for i in range(1, 8)]
+    tests = [f'test{i}' for i in range(1, 9)]
 
     for i, test in enumerate(tests, 1):
-        res = run_in_shell(f'python . tests/{test}.lang')
+        res = run_in_shell(f'python . tests/{test}.lang').strip()
         with open(f'tests/{test}.out', 'r') as f:
-            truth = f.read()
+            truth = f.read().strip()
         
         if res == truth:
-            print(f'"{test}" passed.')
+            print(f' - "{test}" passed.')
         else:
-            print(f'"{test}" failed.')
+            print(f' - "{test}" FAILED!!')
 
 
 if __name__ == '__main__':

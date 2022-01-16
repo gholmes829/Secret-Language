@@ -1,106 +1,125 @@
 """
-
+Transforms lark tokens and trees into desugared components.
+When used as a lark transformer, this class defines how the AST nodes are built.
 """
+
+# type of fn obj is <func> (+args?), type of class obj is <class>, nothing else (I think)
+# primitive are immutable, passed by value, else are object, mutable, passed by ref
 
 import lark
 from icecream import ic
 
-from core import ast_nodes
 from core.ast_manager import AST
-from core.ast_nodes import AssignStmt
+from core.ast_nodes import *
 
 
-@lark.v_args(inline=True)
+@lark.v_args(wrapper = lambda fn, rule_token, children, meta: fn(meta, *children))
 class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     def __init__(self) -> None:
         super().__init__()
 
-    def root(self, stmts):
-        return AST(ast_nodes.Root(stmts.children))
+    # GLOBALS
+    # =======
+    root = lambda _, *args: AST(Root(*args))
+    globals = lambda _, meta, *globals: NodeList(meta, globals, 'globals')
 
-    def print_call(self, _, expr):
-        return ast_nodes.Print(expr)
+    # STATEMENTS
+    # ==========
+    print_call = Print
 
-    def bin_op(self, lhs, operation_token, rhs):
-        return ast_nodes.BinOp(lhs, operation_token.value, rhs)
+    # control
+    branch = lambda _, meta, *branches: If(meta, branches)
 
-    def scoped_id(self, id_token):
-        return ast_nodes.ID(id_token.value)
+    def primary_branch(self, meta, supposition_kw, cond, block):
+        if supposition_kw == 'unless':
+            true_cond = UnaryOp(cond.meta, '!', cond)
+        else:
+            assert supposition_kw == "if"
+            true_cond = cond
+        meta.supposition_kw = supposition_kw
+        return Branch(meta, true_cond, block)
 
-    def simple_id(self, id_token):
-        return ast_nodes.ID(id_token.value)
+    secondary_branch = lambda self, *args: self.primary_branch(*args)
 
-    def assign_stmt(self, identifier, expr):
-        assign_node = ast_nodes.AssignStmt(identifier, expr)
-        return assign_node
+    def loop(self, meta, loop_type, cond, body, else_block):
+        if loop_type == 'until':
+            true_cond = UnaryOp(cond.meta, '!', cond)
+        else:
+            assert loop_type == 'while'
+            true_cond = cond
+        meta.loop_type = loop_type
+        return While(true_cond, body, else_block)
 
-    def assign_decl_stmt(self, mutability_modifier, scope_modifier, execution_modifier, identifier, expr):
-        return ast_nodes.AssignStmt(identifier, expr)  # TODO: add remaining info in new class
+    for_ = For  # TODO: desugar for_
+    return_ = lambda _, meta, expr: Return(meta, expr or None_(meta))
 
-    def fn_def(self, decorator, ret_type, identifier, formals, body):
-        fn_type = ast_nodes.FnType(
+    # assignment
+    assign_decl_stmt = AssignDeclStmt
+    assign_stmt = AssignStmt
+
+    # definition
+    def fn_def(self, meta, decorator, generics, ret_type, identifier, formals, body):
+        fn_obj = FnObj(
+            meta,
             decorator,
+            generics,
             ret_type,
-            formals.children if formals else [],
-            body.children
+            formals,
+            body
         )
-        
-        return AssignStmt(identifier, fn_type)
+        return AssignStmt(meta, identifier, fn_obj)
 
-    def typed_formal(self, type_node, id_node):
+    formals = lambda _, meta, *formals: NodeList(meta, formals, 'formals')
+
+    def formal(self, meta, type_node, id_node):
         id_node.type = type_node.type
+        id_node.meta = meta
         return id_node
 
-    def actual(self, expr):
-        return expr
+    # scoping
+    def block(self, meta, body):
+        # might need to modify this and loop block
+        body.meta = meta
+        return body
 
-    def fn_call(self, identifier, actuals):
-        return ast_nodes.Call(identifier, actuals)
+    body = lambda _, meta, *stmts: NodeList(meta, stmts, 'body')
+    loop_body = lambda _, meta, *stmts: NodeList(meta, stmts, 'loop_body')
 
-    def return_stmt(self, expr):
-        if expr:
-            return ast_nodes.Return(expr or ast_nodes.Null())
-    
-    def if_stmt(self, if_block, else_if_blocks, else_block):
-        if_sequence = [(if_block.children[0], if_block.children[1].children, 'if')]
-
-        if else_if_blocks:
-            for else_if_block in else_if_blocks.children:
-                else_if_cond = else_if_block.children[0]
-                else_if_body_stmts = else_if_block.children[1].children
-                if_sequence.append((else_if_cond, else_if_body_stmts, 'else if'))
-        
-        if else_block:
-            else_body_stmts = else_block.children[0].children
-            if_sequence.append((ast_nodes.BoolLit(True), else_body_stmts, 'else'))
-            
-        return ast_nodes.If(if_sequence)
-
-    def loop_stmt(self, condition, body, else_block):
-        return ast_nodes.While(condition, body.children if body else [])
-
-    def for_stmt(self, identifier, iterable, body, else_block):
-        return ast_nodes.For(identifier, iterable, body, else_block)
-
-    def obj_type(self, obj_type_token, execution_modifier):
-        if isinstance(obj_type_token, lark.Tree):
-            _, input_types, ret_type = obj_type_token.children
-            return ast_nodes.FnSignature(
+    # TYPING
+    # ======
+    def type_(self, meta, type_token, execution_modifier):
+        if isinstance(type_token, lark.Tree):
+            print('What a strange instance...')
+            input('Input: you said you wanted to check this out...')
+            _, input_types, ret_type = type_token.children
+            return FnSignature(
+                meta,
                 None,
                 (input_types.children if input_types else [], ret_type),
                 execution_modifier
             )
         else:
-            return ast_nodes.PrimitiveType(obj_type_token.value, execution_modifier)
+            return PrimitiveType(meta, type_token, execution_modifier)
 
-    def num(self, num_token):
-        return ast_nodes.NumLit(float(num_token.value))
+    # EXPRESSIONS
+    # ===========
+    bin_op = BinOp
 
-    def string(self, str_token):
-        return ast_nodes.StrLit(str_token.value[1:-1])
+    def paren_expr(self, meta, inner):
+        inner.meta = meta
+        return inner
 
-    def boolean(self, bool_token):
-        return ast_nodes.BoolLit({'true': True, 'false': False}[bool_token.value])
 
-    def null(self, null_token):
-        return ast_nodes.Null()
+    # identifiers
+    scoped_id = simple_id = ID
+
+    # call
+    call = lambda _, meta, id_, *actuals: Call(meta, id_, actuals)
+    actuals = lambda _, meta, *actuals: NodeList(meta, actuals, 'actuals')
+    kwarg = AssignStmt
+
+    # literals
+    NUMBER = NumLit
+    STRING = StrLit
+    BOOLEAN = BoolLit
+    NONE = None_

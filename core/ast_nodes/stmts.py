@@ -14,9 +14,24 @@ class Stmt(ASTNode):
         
 
 # statements
+class AssignDeclStmt(Stmt):
+    def __init__(self, meta, lhs, rhs, mutability, scope, execution) -> None:
+        super().__init__(meta)
+        self.lhs = lhs
+        self.rhs = rhs
+        self.lhs.type = rhs.type
+        # modifiers, default None
+        self.mutability = mutability
+        self.scope = scope
+        self.execution = execution
+    
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitAssign(self, *args, **kwargs)
+
 class AssignStmt(Stmt):
-    def __init__(self, lhs, rhs) -> None:
-        super().__init__(None, None)
+    def __init__(self, token, lhs, rhs) -> None:
+        super().__init__(token)
+        self.token = token
         self.lhs = lhs
         self.rhs = rhs
         self.lhs.type = rhs.type
@@ -26,8 +41,8 @@ class AssignStmt(Stmt):
 
 
 class Return(Stmt):
-    def __init__(self, expr) -> None:
-        super().__init__(expr.start_token, expr.end_token)
+    def __init__(self, token, expr) -> None:
+        super().__init__(token)
         self.expr = expr
         self.value = None
 
@@ -36,20 +51,29 @@ class Return(Stmt):
 
 
 class If(Stmt):
-    def __init__(self, if_sequence) -> None:
-        super().__init__(None, None)
+    def __init__(self, token, if_sequence) -> None:
+        super().__init__(token)
         self.if_sequence = if_sequence
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitIf(self, *args, **kwargs)
 
+class Branch(Stmt):
+    def __init__(self, token, cond, body) -> None:
+        super().__init__(token)
+        self.cond = cond
+        self.body = body
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitBranch(self, *args, **kwargs)
+
 
 class For(Stmt):
-    def __init__(self, identifier, iterable, body, else_block) -> None:
-        super().__init__(None, None)
+    def __init__(self, token, identifier, iterable, body, else_block) -> None:
+        super().__init__(token)
         self.identifier = identifier
         self.iterable = iterable
-        self.body = body.children if body else []
+        self.body = body
         self.else_block = else_block
 
     def accept(self, visitor, *args, **kwargs):
@@ -57,10 +81,10 @@ class For(Stmt):
 
 
 class While(Stmt):
-    def __init__(self, condition, body) -> None:
+    def __init__(self, meta, condition, body) -> None:
+        super().__init__(meta)
         self.condition = condition
         self.body = body
-        super().__init__(None, None)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitWhile(self, *args, **kwargs)

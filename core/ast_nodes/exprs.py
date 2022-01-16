@@ -9,15 +9,11 @@ from core.ast_nodes.node import ASTNode
 
 # expressions
 class Expr(ASTNode):
+    dot_node_kwargs = ASTNode.dot_node_kwargs | dict(fillcolor='darksalmon')
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._value = None
         self._type = None
-
-    def make_pydot_node(self, *args, **kwargs):
-        if 'fillcolor' not in kwargs:
-            kwargs['fillcolor'] = 'darksalmon'
-        return super().make_pydot_node(*args, **kwargs)
 
     @property
     def value(self):
@@ -38,16 +34,14 @@ class Expr(ASTNode):
 
 # references
 class Reference(Expr):
+    dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgoldenrod', shape='rectangle')
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def make_pydot_node(self, *args, **kwargs):
-        return super().make_pydot_node(*args, fillcolor='lightgoldenrod', shape='rectangle', **kwargs)
-
 class ID(Reference):
-    def __init__(self, name) -> None:
-        super().__init__(None, None)
-        self.name = name
+    def __init__(self, meta, token) -> None:
+        super().__init__(meta)
+        self.name = token.value
         self.symbol = None
 
     def accept(self, visitor, *args, **kwargs):
@@ -76,6 +70,15 @@ class ID(Reference):
 
     def __repr__(self) -> str:
         return f'<ID "{self.name}" at {id(self)}>'
+
+class UnaryOp(Expr):
+    def __init__(self, token, operation, operand) -> None:
+        super().__init__(token)
+        self.operation = operation
+        self.operand = operand
+    
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitUnaryOp(self, *args, **kwargs)
 
 class BinOp(Expr):
     ops = {
@@ -112,8 +115,8 @@ class BinOp(Expr):
         ('or', bool, bool): (bool, bool, bool),
     }
 
-    def __init__(self, lhs, operation, rhs) -> None:
-        super().__init__(None, None)
+    def __init__(self, meta, lhs, operation, rhs) -> None:
+        super().__init__(meta)
         self.op_str = operation
         self.op, self.op_name = BinOp.ops[operation]
         self.lhs, self.rhs = lhs, rhs
@@ -123,11 +126,11 @@ class BinOp(Expr):
 
 
 class Call(Expr):
-    def __init__(self, identifier, actuals) -> None:
-        super().__init__(None, None)
+    def __init__(self, meta, identifier, actuals) -> None:
+        super().__init__(meta)
         self.identifier = identifier
         self.type = None
-        self.actuals = actuals.children if actuals else []
+        self.actuals = actuals
         self.values = []
 
     def accept(self, visitor, *args, **kwargs):
@@ -144,39 +147,63 @@ class Call(Expr):
 
 # literals
 class Literal(Expr):
-    def __init__(self, value, lit_type, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._value = value
-        self._type = lit_type
+    dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgreen', shape='diamond')
+    def __init__(self, meta, value, lit_type) -> None:
+        super().__init__(meta)
+        self.value = value
+        self.type = lit_type
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitLiteral(self, *args, **kwargs)
 
-    def make_pydot_node(self, *args, **kwargs):
-        return super().make_pydot_node(*args, fillcolor='lightgreen', shape='diamond', **kwargs)
-
 # literals
 class NumLit(Literal):
     type = float
-    def __init__(self, num) -> None:
-        super().__init__(num, float, None, None)
+    def __init__(self, token) -> None:
+        super().__init__(token, float(token), float)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNumLit(self, *args, **kwargs)
 
 
 class StrLit(Literal):
-    def __init__(self, string: lark.Token) -> None:
-        super().__init__(string, str, None, None)
-        self.type = str
+    def __init__(self, token: lark.Token) -> None:
+        super().__init__(token, token.value[1:-1], str)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitStrLit(self, *args, **kwargs)
 
 
 class BoolLit(Literal):
-    def __init__(self, boolean) -> None:
-        super().__init__(boolean, bool, None, None)
+    token_to_bool = {'true': True, 'false': False}
+    def __init__(self, token) -> None:
+        super().__init__(token, BoolLit.token_to_bool[token], bool)
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitBoolLit(self, *args, **kwargs)
+
+class None_(Literal):
+    def __init__(self, token) -> None:
+        super().__init__(token, token, bool)
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitNoneLit(self, *args, **kwargs)
+
+class FnObj(Literal):  # inherit from new Obj (differentiate primative from obj maybe)
+    def __init__(self, meta, decorator, generics, ret_type, formals, body) -> None:
+        super().__init__(meta)
+        self.identifier = str(id(self))
+        self.generics = generics
+        self.decorator = decorator
+        self.ret_type = ret_type
+        self.formals = formals
+        self.body = body
+        self.type = self
+        self.value = self
+        self.symbol = None
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitFnType(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<fn_type at {id(self)}>'

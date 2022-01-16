@@ -1,9 +1,27 @@
+# fn call chains
+
+num f2(num arg) {
+    return arg
+}
+
+num f1(num arg) {
+    return f2(arg)
+}
+
 
 
 num main() {
-    var = 1
+
+    ([tree<num>, num] -> num) make_sum_tree(num offset) {
+        num inner(tree<num> my_tree, num arg) {
+            return my_tree.sum() + offset / arg
+        }
+        return inner
+    }
+
+    var = 2
     if true {
-        print(1)
+        print(f1(var))
     }
     return 0
 }

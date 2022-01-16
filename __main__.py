@@ -7,14 +7,16 @@ import os.path as osp, os
 import argparse
 import lark
 import dill
+from icecream import ic
 
 from core.transformer import ASTBuilder
 from core import utils
 
 
 LANG_EXT = 'lang'
-PARSER_TYPE = 'lalr'
-GRAMMAR_F_PATH = osp.join(osp.dirname(osp.realpath(__file__)), 'grammar.lark')
+PARSER_TYPE = 'earley'  # "lalr" or "earley"
+GRAMMAR_F_PATH = osp.join(osp.dirname(osp.realpath(__file__)), 'grammar', 'grammar.lark')
+
 
 def get_cmd_line_args():
     parser = argparse.ArgumentParser()
@@ -48,14 +50,30 @@ def main():
             sys.exit(dill.load(f).interpret())
 
     prog = utils.read_file(args.src_f)
-  
-    parser = lark.Lark.open(
-        GRAMMAR_F_PATH,
-        start = 'root',
-        parser = PARSER_TYPE,
-        cache = 'grammar.cached',
-        transformer = ASTBuilder(),
-    )
+
+    if PARSER_TYPE == 'earley':
+        parser = lark.Lark.open(
+            GRAMMAR_F_PATH,
+            start = 'root',
+            parser = PARSER_TYPE,
+            propagate_positions = True,
+            maybe_placeholders = True,
+        )
+        transformer = ASTBuilder()
+        parse_tree = parser.parse(prog)
+        ast = transformer.transform(parse_tree)
+
+    else:
+        parser = lark.Lark.open(
+            GRAMMAR_F_PATH,
+            start = 'root',
+            parser = PARSER_TYPE,
+            cache = osp.join('grammar', 'cached'),
+            transformer = ASTBuilder(),
+            propagate_positions = True,
+            keep_all_tokens = True,
+            maybe_placeholders = True,
+        )
 
     ast = parser.parse(prog)
 
