@@ -83,3 +83,6 @@ class Unparser(Visitor):
 
     def visitBoolLit(self, bool_lit_node, depth):
         return str(bool_lit_node.value)
+
+    def visitNone(self, none_node, depth):
+        return str(none_node.value)

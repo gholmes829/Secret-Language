@@ -167,7 +167,7 @@ class None_(Literal):
         super().__init__(token, token, None)
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitNoneLit(self, *args, **kwargs)
+        return visitor.visitNone(self, *args, **kwargs)
 
 
 # object values

@@ -28,6 +28,16 @@ class SemanticAnalyzer(Visitor):
             assert id_node.type, id_node
             id_node.symbol = symbol_table.add_primitive(id_node.name, id_node.type)
 
+    def visitAssignDecl(self, assign_node, symbol_table):
+        if assign_node.rhs.type:
+            assign_node.lhs.type = assign_node.rhs.type
+            assign_node.lhs.accept(self, symbol_table)
+            assign_node.rhs.accept(self, symbol_table)
+        else:
+            assign_node.rhs.accept(self, symbol_table)
+            assign_node.lhs.type = assign_node.rhs.type
+            assign_node.lhs.accept(self, symbol_table)
+
     def visitAssign(self, assign_node, symbol_table):
         if assign_node.rhs.type:
             assign_node.lhs.type = assign_node.rhs.type
@@ -81,7 +91,7 @@ class SemanticAnalyzer(Visitor):
     def visitPrimitiveType(self, obj_type_node, symbol_table):
         raise NotImplementedError
 
-    def visitFnType(self, fn_type_node, symbol_table):
+    def visitFnObj(self, fn_type_node, symbol_table):
         fn_type_node.symbol = symbol_table.add_fn(
             fn_type_node.identifier,
             fn_type_node.ret_type.type,
@@ -97,7 +107,7 @@ class SemanticAnalyzer(Visitor):
                 stmt.accept(self, symbol_table)
 
 
-    def visitFnSignature(self, fn_sig_node, symbol_table):
+    def visitFnType(self, fn_sig_node, symbol_table):
         pass
 
 

@@ -80,3 +80,7 @@ class Visitor(metaclass = ABCMeta):
     @abstractmethod
     def visitBoolLit(self, bool_lit_node, *args, **kwargs):
         raise NotImplementedError
+
+    @abstractmethod
+    def visitNone(self, bool_lit_node, *args, **kwargs):
+        raise NotImplementedError

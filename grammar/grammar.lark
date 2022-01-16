@@ -26,6 +26,7 @@
 // should "as" keyword be more generalized?
 // should there be an "Any" type?
 // assign built-in that sets attribute and returns var that got modified
+// generators
 
 // Tentative:
 // ======================
@@ -111,7 +112,7 @@ WS: /[ \t\f\r\n]/+
     | return_
 
 // shared
-?condition: (expr | walrus_assign)
+?condition: expr
 
 // branch stmt
 SUPPOSITION: ("if" | "unless")
@@ -155,7 +156,6 @@ assign_decl: "let" declared_identifiers "=" exprs  // multiple on both sides for
 declared_identifiers: declared_identifier ("," declared_identifier)*
 declared_identifier: [mutability_modifier] [scope_modifier] [execution_modifier] simple_id
 
-walrus_assign: "(" scoped_ids ":=" exprs ")"
 alias_assign: scoped_ids "as" scoped_ids  // might need to double check this later on
 
 assign: scoped_ids "=" exprs
@@ -240,6 +240,7 @@ object_type: fn_type
     | conditional
     | deffered
     | alias_assign
+    | walrus
     | term
 
 
@@ -279,12 +280,12 @@ ternary_op: expr "?" expr ":" expr
 
 // <- Other ->
 conditional: "(" expr SUPPOSITION expr ("else" expr SUPPOSITION expr)* "else" expr ")"
-
+walrus: scoped_ids ":=" exprs  // could be ambiguous sommetimes?
 deffered: expr "where" scoped_id "=" expr
 
 
 // <- Call ->
-call: scoped_id ("(" [actuals] ")")+
+call: term "(" [actuals] ")"  // should allow chaining
 ?actuals: actual ("," actual)*
 ?actual: expr
     | simple_id "=" expr -> kwarg
@@ -318,18 +319,22 @@ anon_fn: "(" formals ")" "=>" type_ block  // this is an expr that contains stmt
 
 // containers
 containers: sets | lists | tuples | dicts
-container: set | list | tuple | dict
+container: set | list | tuple | dict | set_comp | list_comp | dict_comp
 
 sets: set ("," set)*
+set_comp: "{" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] "}"
 set: "{" [exprs] "}"
 
 lists: list ("," list)*
+list_comp: "[" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] "]"
 list: "[" [exprs] "]"
 
 tuples: tuple ("," tuple)*
+// add generator comprehension as well!
 tuple: "(" [exprs] ")"
 
 dicts: dicts ("," dicts)*
+dict_comp: "<" expr ":" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] ">"
 dict: "<" [items] ">"
 
 items: item ("," item)*
