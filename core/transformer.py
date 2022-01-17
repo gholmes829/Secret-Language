@@ -158,7 +158,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     cls_stmts = make_collector('cls_stmts')
 
     def this_id(self, meta, *args):
-        joined = '.'.join(args[1:])
+        joined = ''
         # ID(meta, args[0]) instead of args[0]?
         return ThisID(meta, joined, ID(meta, args[0]), args)
 
@@ -199,6 +199,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         object = args[0]
         if not isinstance(object, ThisID):
             object = ID(meta, args[0])
+        else:
+            object.name = joined
         return ScopedID(meta, joined, object, args)
 
     simple_id = ID

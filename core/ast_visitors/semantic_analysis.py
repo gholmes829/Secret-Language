@@ -4,6 +4,7 @@
 
 from icecream import ic
 from core import ast_nodes
+from core.ast_nodes.exprs import ThisID
 
 from core.ast_visitors.visitor import Visitor
 
@@ -64,27 +65,34 @@ class SemanticAnalyzer(Visitor):
     def define(self, node: ast_nodes.ASTNode):
         self.scopes.top[node.name]['init'] = True
 
-    def get_type(self, node):
+    def get_type(self, name):
         class Dummy1:
             def __init__(self, val) -> None:
                 self.type = val
         class Dummy2:
             def __init__(self, val) -> None:
                 self.ret_type = Dummy1(val)
-        if node.name == 'clock': return Dummy2(float)
-        elif node.name == 'print': return Dummy2('void')  # hard coded for now, need to find way to add builtins to semantic analysis
+        if name == 'clock': return Dummy2(float)
+        elif name == 'print': return Dummy2('void')  # hard coded for now, need to find way to add builtins to semantic analysis
 
         for scope in reversed(self.scopes):
-            if node.name in scope:
-                return scope[node.name]['type']
-        raise ValueError(f'Could not retrieve type for "{node.name}"')
+            if name in scope:
+                return scope[name]['type']
+        raise ValueError(f'Could not retrieve type for "{name}"')
 
-    def set_type(self, node, type_):
+    def set_type_inst(self, name, type_):
         for scope in reversed(self.scopes):
-            if node.name in scope:
-                scope[node.name]['type'] = type_
+            if 'this' in scope:
+                scope[name] = {'init': True, 'type': type_}
                 return
-        raise ValueError(f'Could not set type for "{node.name}"')
+        raise ValueError(f'Could not set type for "{name}"')
+
+    def set_type(self, name, type_):
+        for scope in reversed(self.scopes):
+            if name in scope:
+                scope[name]['type'] = type_
+                return
+        raise ValueError(f'Could not set type for "{name}"')
 
     def resolve_local(self, node: ast_nodes.ASTNode, node_name):
         assert hasattr(node, 'name')
@@ -114,12 +122,12 @@ class SemanticAnalyzer(Visitor):
             # have to do this since desugared fn def ...maybe not a good idea in retrospect
             # otherwise have issue with recursion and closures depending on placement of set type stmt
             try:
-                self.set_type(ad_node.lhs, ad_node.rhs.type)
+                self.set_type(ad_node.lhs.name, ad_node.rhs.type)
             except Exception as e:
                 pass
                 raise
         self.resolve(ad_node.rhs)  # can skip if enable plain decl wo assign
-        self.set_type(ad_node.lhs, ad_node.rhs.type)
+        self.set_type(ad_node.lhs.name, ad_node.rhs.type)
         self.define(ad_node.lhs)
 
     def visitID(self, id_node):
@@ -128,11 +136,13 @@ class SemanticAnalyzer(Visitor):
         if id_node.name in self.scopes.top and not self.scopes.top[id_node.name]['init']:
             raise ValueError('Variable can not reference itself in initializer.')
 
-        id_node.type = self.get_type(id_node)  # hopefully not needed after type resolution
+        id_node.type = self.get_type(id_node.name)  # hopefully not needed after type resolution
         self.resolve_local(id_node, id_node.name)
 
     def visitScopedID(self, id_node):
-        # ic(id_node, id_node.object)
+        try:
+            id_node.type = self.get_type(id_node.name)
+        except: pass
         self.resolve(id_node.object)
 
     def visitThisID(self, this_id_node):
@@ -140,14 +150,19 @@ class SemanticAnalyzer(Visitor):
 
     def visitSetStmt(self, set_node):
         self.resolve(set_node.rhs)
-        # ic(set_node.lhs, set_node.lhs.object)
         self.resolve(set_node.lhs.object)
+        #ic(type(set_node.lhs.object))
+        if isinstance(set_node.lhs.object, ThisID):
+            self.set_type_inst(set_node.lhs.object.name, set_node.rhs.type)
+        else:
+            self.set_type(set_node.lhs.object.name, set_node.rhs.type)
+        # print(f'Set type for {set_node.lhs.object} in {self.scopes.top}')
 
 
     def visitAssign(self, assign_node):
         # should add type define to scopes?
         self.resolve(assign_node.rhs)
-        self.set_type(assign_node.lhs, assign_node.rhs.type)
+        self.set_type(assign_node.lhs.name, assign_node.rhs.type)
         self.resolve_local(assign_node.lhs, assign_node.lhs.name)
 
     def visitFnObj(self, fn_obj_node):
@@ -156,13 +171,13 @@ class SemanticAnalyzer(Visitor):
     def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
         self.declare(cls_obj_node)
         self.define(cls_obj_node)
-        self.set_type(cls_obj_node, cls_obj_node.type)
+        self.set_type(cls_obj_node.name, cls_obj_node.type)
 
         for method in cls_obj_node.body:
             if isinstance(method, ast_nodes.MethodObj):
                 self.declare(method)  # might be bad
                 self.define(method)
-                self.set_type(method, method.type)
+                self.set_type(method.name, method.type)
 
         with self.scopes.enter_new(cls_obj_node.name):
 
@@ -192,6 +207,8 @@ class SemanticAnalyzer(Visitor):
         self.resolve(while_node.body)
 
     def visitBinOp(self, bin_op_node):
+        #ic(bin_op_node.lhs)
+        #ic(bin_op_node.lhs.type)
         self.resolve(bin_op_node.lhs)
         self.resolve(bin_op_node.rhs)
         bin_op_node.lhs_cast, bin_op_node.rhs_cast, bin_op_node.res_cast = \
@@ -207,7 +224,7 @@ class SemanticAnalyzer(Visitor):
     def visitCall(self, call_node):
         self.resolve(call_node.name)
         self.resolve(call_node.actuals)
-        type_ = self.get_type(call_node.name).ret_type.type
+        type_ = self.get_type(call_node.name.name).ret_type.type
         call_node.type = type_
 
     def visitLiteral(self, literal_node):
