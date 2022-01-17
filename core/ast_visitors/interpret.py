@@ -241,14 +241,12 @@ class Interpreter(Visitor):
         # return self.env.get(id_node.name)  # pre-bind version
 
     def visitThisID(self, this_id_node):
-        #ic('looking up this')
-        #self.env.print()
-        #ic(self.locals)
-        #ic(this_id_node.object)
         return self.look_up_var(this_id_node.object, 'this')
 
     def visitScopedID(self, id_node: ast_nodes.ScopedID):
         instance = self.interpret(id_node.object)
+        if isinstance(id_node.object, ast_nodes.SuperID):
+            return instance
         return instance.get(id_node.name)
 
     def visitSetStmt(self, set_node):
@@ -256,9 +254,16 @@ class Interpreter(Visitor):
         val = self.interpret(set_node.rhs)
         instance.set(set_node.lhs.name, val)
 
+    def visitSuperID(self, super_node):
+        dist = self.locals[super_node.object]
+        superclass = self.env.getAt(dist, 'super')
+
+        object_ = self.env.getAt(dist - 1, 'this')
+        # add support for static cls vars
+        method = superclass.find_method(super_node.name)
+        return method.bind(object_)
+
     def visitAssign(self, assign_node):
-        #ic('before')
-        #ic(assign_node.lhs)
         self.interpret(assign_node.lhs)
         val = self.interpret(assign_node.rhs)
         assign_node.lhs.type = assign_node.rhs.type  # is this necessary?
@@ -285,7 +290,6 @@ class Interpreter(Visitor):
             self.interpret(while_node.body)
 
     def visitCall(self, call_node: ast_nodes.Call):
-        #ic(call_node.name)
         name = self.interpret(call_node.name)
         args = [self.interpret(arg) for arg in call_node.actuals]
         assert isinstance(name, InternalCallable)
@@ -298,11 +302,20 @@ class Interpreter(Visitor):
             assert isinstance(superclass, InternalClass)
 
         self.env.define(cls_obj_node.name, None)
+
+        if cls_obj_node.inheritance:
+            self.env = Environment('base', self.env)
+            self.env.define('super', superclass)
+
         methods = {}
         for method in cls_obj_node.body:
             internal_method = InternalFunction(method, self.env, method.name == 'init')
             methods[method.name] = internal_method
         klass = InternalClass(cls_obj_node.name, superclass, methods)
+
+        if superclass:
+            self.env = self.env.enclosing
+
         self.env.assign(cls_obj_node.name, klass)
     
     def visitRoot(self, root_node):

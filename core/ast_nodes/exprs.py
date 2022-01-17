@@ -159,6 +159,20 @@ class ThisID(Reference):
     def __repr__(self) -> str:
         return f'<ThisID at {id(self)}>'
 
+class SuperID(Reference):
+    def __init__(self, meta, name, object, id_tokens) -> None:
+        super().__init__(meta)
+        self.name = name
+        self.object = object
+        assert object.name == 'super'
+        self.components = id_tokens
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitSuperID(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<SuperID at {id(self)}>'
+
 # object values
 class Object(Expr):
     def __init__(self, meta, obj_type) -> None:

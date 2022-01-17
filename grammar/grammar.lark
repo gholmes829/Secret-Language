@@ -181,6 +181,9 @@ method: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simp
 this_id: THIS
 THIS.1: "this"
 
+super_id: SUPER
+SUPER.1: "super"
+
 // functions
 fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
 formals: formal ("," formal)*
@@ -312,7 +315,7 @@ lvals: lval ("," lval)*
 ?any_id: scoped_id | simple_id | this_id
 
 scoped_ids: scoped_id ("," scoped_id)*
-scoped_id: this_id ("." CNAME)+ | CNAME ("." CNAME)+
+scoped_id: this_id ("." CNAME)+ | super_id ("." CNAME)+ | CNAME ("." CNAME)+
 
 simple_ids: simple_id ("," simple_id)*
 simple_id: CNAME

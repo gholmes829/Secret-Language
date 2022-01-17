@@ -139,6 +139,9 @@ class SemanticAnalyzer(Visitor):
         id_node.type = self.get_type(id_node.name)  # hopefully not needed after type resolution
         self.resolve_local(id_node, id_node.name)
 
+    def visitSuperID(self, super_node):
+        pass
+
     def visitScopedID(self, id_node):
         try:
             id_node.type = self.get_type(id_node.name)
@@ -147,6 +150,9 @@ class SemanticAnalyzer(Visitor):
 
     def visitThisID(self, this_id_node):
         self.resolve_local(this_id_node.object, 'this')
+
+    def visitSuperID(self, super_id):
+        self.resolve_local(super_id.object, 'super')
 
     def visitSetStmt(self, set_node):
         self.resolve(set_node.rhs)
@@ -171,6 +177,13 @@ class SemanticAnalyzer(Visitor):
     def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
         self.declare(cls_obj_node)
         self.define(cls_obj_node)
+        if cls_obj_node.inheritance:
+            self.resolve(cls_obj_node.inheritance)
+
+        if cls_obj_node.inheritance:
+            self.scopes.enter_new('super')
+            self.scopes.top['super'] = {'init': True, 'type': cls_obj_node.inheritance.type}
+
         self.set_type(cls_obj_node.name, cls_obj_node.type)
 
         for method in cls_obj_node.body:
@@ -191,6 +204,11 @@ class SemanticAnalyzer(Visitor):
                     # self.define(method)
                     # self.set_type(method, method.type)
                     self.resolve_function(method)
+        
+        if cls_obj_node.inheritance:
+            self.scopes.leave_scope()
+
+            
 
     def visitNodeList(self, node_list_node):
         for node in node_list_node:

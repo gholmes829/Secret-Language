@@ -9,6 +9,7 @@
 # for fn calls, each fn call gets own env to protect recursions
 
 # consider type literals, function str should also refer to str type literal for example
+# multiple inheritance and method resolution
 
 
 from core.ast_visitors import SemanticAnalyzer as SA, Unparser, GraphManager, Interpreter

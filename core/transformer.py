@@ -79,7 +79,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         # curr assumes sizes are equal
         assignments = []
         for lhs, rhs in zip(lvals, exprs):
-            if isinstance(lhs, (ScopedID, ThisID)):
+            if isinstance(lhs, (ScopedID, ThisID, SuperID)):  # not sure if SuperID shld be here
                 assignments.append(SetStmt(meta, lhs, rhs))
             else:
                 assignments.append(Assign(meta, lhs, rhs))
@@ -167,6 +167,9 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         # ID(meta, args[0]) instead of args[0]?
         return ThisID(meta, joined, ID(meta, args[0]), args)
 
+    def super_id(self, meta, *args):
+        return SuperID(meta, '', ID(meta, args[0]), args)
+
     def method(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, identifier, formals, body):
         method_obj = MethodObj(
             meta,
@@ -202,10 +205,10 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         # could compose this as chain of ID nodes..
         joined = '.'.join(args[1:])
         object = args[0]
-        if not isinstance(object, ThisID):
-            object = ID(meta, args[0])
-        else:
+        if isinstance(object, (ThisID, SuperID)):
             object.name = joined
+        else:
+            object = ID(meta, args[0])
         return ScopedID(meta, joined, object, args)
 
     simple_id = ID
