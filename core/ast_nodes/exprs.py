@@ -109,13 +109,8 @@ class Call(Expr):
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitCall(self, *args, **kwargs)
 
-    @property
-    def value(self):
-        return self.values.pop()
-
-    @value.setter
-    def value(self, value):
-        self.values.append(value)
+    def __repr__(self):
+        return f'<CallNode "{self.name}" w/ {len(self.actuals)} actuals at {id(self)} >'
 
 
 # references
@@ -150,6 +145,19 @@ class ScopedID(Reference):
     def __repr__(self) -> str:
         return f'<ScopedID "{self.name}" at {id(self)}>'
 
+class ThisID(Reference):
+    def __init__(self, meta, name, object, id_tokens) -> None:
+        super().__init__(meta)
+        self.name = name
+        self.object = object
+        assert object.name == 'this'
+        self.components = id_tokens
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitThisID(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<ThisID at {id(self)}>'
 
 # object values
 class Object(Expr):

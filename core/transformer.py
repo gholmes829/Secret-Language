@@ -74,7 +74,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         # curr assumes sizes are equal
         assignments = []
         for lhs, rhs in zip(lvals, exprs):
-            if isinstance(lhs, ScopedID):
+            if isinstance(lhs, (ScopedID, ThisID)):
                 assignments.append(SetStmt(meta, lhs, rhs))
             else:
                 assignments.append(Assign(meta, lhs, rhs))
@@ -157,6 +157,11 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     cls_stmts = make_collector('cls_stmts')
 
+    def this_id(self, meta, *args):
+        joined = '.'.join(args[1:])
+        # ID(meta, args[0]) instead of args[0]?
+        return ThisID(meta, joined, ID(meta, args[0]), args)
+
     def method(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, identifier, formals, body):
         method_obj = MethodObj(
             meta,
@@ -189,8 +194,12 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     # identifiers
     def scoped_id(self, meta, *args):
+        # could compose this as chain of ID nodes..
         joined = '.'.join(args[1:])
-        return ScopedID(meta, joined, ID(meta, args[0]), args)
+        object = args[0]
+        if not isinstance(object, ThisID):
+            object = ID(meta, args[0])
+        return ScopedID(meta, joined, object, args)
 
     simple_id = ID
 

@@ -3,13 +3,11 @@
 class Circle {
     let pi = 3.14
 
-    void init() {
-        # this.radius = radius
+    void init(num radius) {
         print('initializing')
     }
 
     num get_radius() {
-        # return this.radius
         print('radius')
     }
 }
@@ -19,9 +17,7 @@ num main() {
     let bb_circle = Circle(2)
     bb_circle.radius = 3
     print(bb_circle.radius)
-    bb_circle.init()
-    bb_circle.radius = 5
-    print(bb_circle.radius)
+    bb_circle.init(10)
     print(bb_circle)
     return 0
 }

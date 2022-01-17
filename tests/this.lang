@@ -1,0 +1,27 @@
+# testing this binding
+
+class Cake {
+    void taste() {
+        print('tasting')
+        print(this.flavor)
+    }
+
+    void set_flavor(str flavor) {
+        print('setting flavor')
+        this.flavor = flavor   
+    }
+}
+
+num main() {
+    let cake1 = Cake()
+    cake1.flavor = 'German chocolate'
+    cake1.taste()
+
+    let cake2 = Cake()
+    cake2.set_flavor('cheesecake')
+    cake2.taste()
+
+    return 0
+}
+
+main()

@@ -86,13 +86,15 @@ class SemanticAnalyzer(Visitor):
                 return
         raise ValueError(f'Could not set type for "{node.name}"')
 
-    def resolve_local(self, node: ast_nodes.ASTNode):
+    def resolve_local(self, node: ast_nodes.ASTNode, node_name):
         assert hasattr(node, 'name')
         for i, (scope, name) in enumerate(list(zip(self.scopes.scopes, self.scopes.names))[::-1][:-1]):
             assert name != 'globals'  # hopefully no one names their function globals until this gets fixed
-            if node.name in scope:
+            if node_name in scope:
                 self.interpreter.resolve(node, i)
                 break
+        else:
+            pass
 
     def resolve_function(self, node: ast_nodes.ASTNode):
         with self.scopes.enter_new(node.name):
@@ -121,18 +123,24 @@ class SemanticAnalyzer(Visitor):
         self.define(ad_node.lhs)
 
     def visitID(self, id_node):
+        # ic(id_node)
         # I think this is varExpr from book
         if id_node.name in self.scopes.top and not self.scopes.top[id_node.name]['init']:
             raise ValueError('Variable can not reference itself in initializer.')
 
         id_node.type = self.get_type(id_node)  # hopefully not needed after type resolution
-        self.resolve_local(id_node)
+        self.resolve_local(id_node, id_node.name)
 
     def visitScopedID(self, id_node):
+        # ic(id_node, id_node.object)
         self.resolve(id_node.object)
+
+    def visitThisID(self, this_id_node):
+        self.resolve_local(this_id_node.object, 'this')
 
     def visitSetStmt(self, set_node):
         self.resolve(set_node.rhs)
+        # ic(set_node.lhs, set_node.lhs.object)
         self.resolve(set_node.lhs.object)
 
 
@@ -140,7 +148,7 @@ class SemanticAnalyzer(Visitor):
         # should add type define to scopes?
         self.resolve(assign_node.rhs)
         self.set_type(assign_node.lhs, assign_node.rhs.type)
-        self.resolve_local(assign_node.lhs)
+        self.resolve_local(assign_node.lhs, assign_node.lhs.name)
 
     def visitFnObj(self, fn_obj_node):
         self.resolve_function(fn_obj_node)
@@ -155,7 +163,17 @@ class SemanticAnalyzer(Visitor):
                 self.declare(method)  # might be bad
                 self.define(method)
                 self.set_type(method, method.type)
-                self.resolve_function(method)
+
+        with self.scopes.enter_new(cls_obj_node.name):
+
+            self.scopes.top['this'] = {'init': True, 'type': cls_obj_node.type}
+
+            for method in cls_obj_node.body:
+                if isinstance(method, ast_nodes.MethodObj):
+                    # self.declare(method)  # might be bad
+                    # self.define(method)
+                    # self.set_type(method, method.type)
+                    self.resolve_function(method)
 
     def visitNodeList(self, node_list_node):
         for node in node_list_node:

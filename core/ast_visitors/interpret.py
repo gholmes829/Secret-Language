@@ -35,7 +35,8 @@ class InternalInstance:
         if name in self.fields:
             return self.fields[name]
         
-        return self.klass.find_method(name)
+        method = self.klass.find_method(name)
+        return method.bind(self)
     
     def set(self, name, val):
         self.fields[name] = val
@@ -63,6 +64,11 @@ class InternalFunction(InternalCallable):
         super().__init__()
         self.fn_obj = fn_obj
         self.closure = closure
+
+    def bind(self, instance):
+        env = Environment('binding', self.closure)
+        env.define('this', instance)
+        return InternalFunction(self.fn_obj, env)
 
     def __call__(self, interpreter: 'Interpreter', *args):
         assert len(args) == len(self.fn_obj.formals)
@@ -112,6 +118,10 @@ class Environment:
             for name, builtin in Environment._builtins:
                 self.define(name, builtin)
 
+    def print(self):
+        print(f'Env "{self.name}" -> {self.enclosing}:')
+        for k, v in self.scope:
+            print(f'\t{k}: {v}')
 
     def define(self, name, val):
         #if name in self.scope:
@@ -174,12 +184,12 @@ class Interpreter(Visitor):
     def resolve(self, expr, depth):
         self.locals[expr] = depth  # should type also be added here like {depth: depth, type: type}
 
-    def look_up_var(self, node):
+    def look_up_var(self, node, name):
         if node in self.locals:
             dist = self.locals[node]
-            return self.env.getAt(dist, node.name)
+            return self.env.getAt(dist, name)
         else:
-            return self.globals.get(node.name)
+            return self.globals.get(name)
 
     def __enter__(self):
         return self
@@ -216,12 +226,18 @@ class Interpreter(Visitor):
         self.env.define(ad_node.lhs.name, val)
 
     def visitID(self, id_node):
-        return self.look_up_var(id_node)
+        return self.look_up_var(id_node, id_node.name)
         # return self.env.get(id_node.name)  # pre-bind version
+
+    def visitThisID(self, this_id_node):
+        #ic('looking up this')
+        #self.env.print()
+        #ic(self.locals)
+        #ic(this_id_node.object)
+        return self.look_up_var(this_id_node.object, 'this')
 
     def visitScopedID(self, id_node: ast_nodes.ScopedID):
         instance = self.interpret(id_node.object)
-        assert isinstance(instance, InternalInstance)
         return instance.get(id_node.name)
 
     def visitSetStmt(self, set_node):
@@ -230,6 +246,8 @@ class Interpreter(Visitor):
         instance.set(set_node.lhs.name, val)
 
     def visitAssign(self, assign_node):
+        #ic('before')
+        #ic(assign_node.lhs)
         self.interpret(assign_node.lhs)
         val = self.interpret(assign_node.rhs)
         assign_node.lhs.type = assign_node.rhs.type  # is this necessary?
@@ -256,6 +274,7 @@ class Interpreter(Visitor):
             self.interpret(while_node.body)
 
     def visitCall(self, call_node: ast_nodes.Call):
+        #ic(call_node.name)
         name = self.interpret(call_node.name)
         args = [self.interpret(arg) for arg in call_node.actuals]
         assert isinstance(name, InternalCallable)

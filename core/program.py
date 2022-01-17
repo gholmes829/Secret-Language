@@ -31,6 +31,7 @@ class Program:
         return graph_manager.graph.to_string()
 
     def interpret(self):
+        #input('interpret?')
         exit_code = None
         try:
             self.interpreter.interpret(self.ast)

@@ -178,6 +178,8 @@ definition: cls_def | fn_def
 cls_def: [decorator] [generics] "class" simple_id ["(" any_id ")"] "{" [cls_stmts] "}"
 cls_stmts: (method | assign_decl)*
 method: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
+this_id: THIS
+THIS.1: "this"
 
 // functions
 fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
@@ -307,10 +309,10 @@ lvals: lval ("," lval)*
 
 // identifiers
 ?any_ids: any_id ("," any_id)*
-?any_id: scoped_id | simple_id
+?any_id: scoped_id | simple_id | this_id
 
 scoped_ids: scoped_id ("," scoped_id)*
-scoped_id: CNAME ("." CNAME)+
+scoped_id: this_id ("." CNAME)+ | CNAME ("." CNAME)+
 
 simple_ids: simple_id ("," simple_id)*
 simple_id: CNAME
