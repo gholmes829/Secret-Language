@@ -1,0 +1,16 @@
+# basic test
+
+num h() {
+    print(clock())
+    return 0
+}
+
+void g() {
+    h()
+}
+
+void f() {
+    g()
+}
+
+f()

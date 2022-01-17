@@ -39,16 +39,19 @@ class Root(ASTNode):
 
 
 class NodeList(ASTNode):
-    def __init__(self, meta, nodes, list_name) -> None:
+    def __init__(self, meta, nodes, name) -> None:
         super().__init__(meta)
         self.nodes = nodes
-        self.list_name = list_name
+        self.name = name
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNodeList(self, *args, **kwargs)
+
+    def __len__(self):
+        return len(self.nodes)
 
     def __iter__(self):
         return self.nodes.__iter__()
 
     def __repr__(self):
-        return f'<"{self.list_name}" list obj at {id(self)}>'
+        return f'<"{self.nodes}" NodeList obj at {id(self)}>'

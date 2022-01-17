@@ -5,6 +5,8 @@ When used as a lark transformer, this class defines how the AST nodes are built.
 
 # type of fn obj is <func> (+args?), type of class obj is <class>, nothing else (I think)
 # primitive are immutable, passed by value, else are object, mutable, passed by ref
+# make sure that fns wo ret stmt still return None or smth
+# for print, desugar by implicitly casting args to str first
 
 import lark
 from icecream import ic
@@ -28,8 +30,6 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     globals = make_collector('globals')
 
     # STATEMENTS
-    print_call = Print
-
     # control
     branch = make_collector(type_ = If)
 
@@ -57,8 +57,26 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     return_ = lambda _, meta, expr: Return(meta, expr or None_(meta))
 
     # assignment
-    assign_decl_stmt = AssignDecl
-    assign_stmt = Assign
+    def assign_decl(self, meta, declarations, exprs):
+        # add support for mult left, one right i.e. a, b, c = (1, 2, 3)
+        return NodeList(meta, [AssignDecl(meta, decl, expr, decl.mods['mutability'], decl.mods['scope'], decl.mods['execution']) for decl, expr in zip(declarations, exprs)], 'assign_decl')
+
+    def assign(self, meta, lvals, exprs):
+        # curr assumes sizes are equal
+        return NodeList(meta, [Assign(meta, lhs, rhs) for lhs, rhs in zip(lvals, exprs)], 'assignments')
+
+    lvals = make_collector('lvals')
+
+    declared_identifiers = make_collector('decl_ids')
+
+    def declared_identifier(self, meta, mutability_modifier, scope_modifier, execution_modifier, simple_id):
+        return ID(
+                meta,
+                simple_id,
+                mutability = mutability_modifier,
+                scope = scope_modifier,
+                execution = execution_modifier,
+            )
 
     # definition
     def fn_def(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, identifier, formals, body):
@@ -72,7 +90,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
             formals or NodeList(meta, [], 'formals'),
             body
         )
-        return Assign(meta, identifier, fn_obj)
+        fn_obj.name = identifier.name
+        return AssignDecl(meta, identifier, fn_obj, None, None, None)
 
     formals = make_collector('formals')
 
@@ -90,22 +109,25 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     body = make_collector('body')
     loop_body = make_collector('loop_body')
 
+    def parameterized_object_type(self, meta, obj_type, parameterization):
+        if parameterization:
+            obj_type.parameterize(parameterization)
+            obj_type.meta = meta
+        return obj_type
+
+    def fn_type(self, meta, mutability_mod, scope_mod, formal_types, ret_type):
+        return FnType(meta, mutability_mod, scope_mod, ret_type, formal_types or [])
+
     # TYPING
     def type_(self, meta, type_token, execution_modifier):
-        if isinstance(type_token, lark.Tree):
-            print('What a strange instance...')
-            input('Input: you said you wanted to check this out...')
-            _, input_types, ret_type = type_token.children
-            return FnType(
-                meta,
-                None,
-                (input_types.children if input_types else [], ret_type),
-                execution_modifier
-            )
+        if isinstance(type_token, FnType):
+            assert execution_modifier is None
+            return type_token
         else:
             return PrimitiveType(meta, type_token, execution_modifier)
 
     # EXPRESSIONS
+    exprs = make_collector('exprs')
     bin_op = BinOp
 
     def paren_expr(self, meta, inner):
@@ -113,7 +135,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         return inner
 
     # identifiers
-    scoped_id = simple_id = ID
+    scoped_id = ID
+    simple_id = ID
 
     # call
     call = lambda _, meta, id_, *actuals: Call(meta, id_, actuals)

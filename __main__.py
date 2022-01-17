@@ -75,7 +75,7 @@ def main():
             maybe_placeholders = True,
         )
 
-    ast = parser.parse(prog)
+        ast = parser.parse(prog)
 
     if args.unparse: unparse_ast(ast)
     if args.gen_ast: graph_ast(ast, args.src_f)

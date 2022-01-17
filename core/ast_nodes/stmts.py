@@ -75,7 +75,7 @@ class AssignDecl(Stmt):
         self.execution = execution
     
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitAssign(self, *args, **kwargs)
+        return visitor.visitAssignDecl(self, *args, **kwargs)
 
 class Assign(Stmt):
     def __init__(self, meta, lhs, rhs) -> None:

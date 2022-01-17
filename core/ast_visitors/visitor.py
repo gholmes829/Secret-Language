@@ -14,10 +14,6 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def visitPrint(self, print_node, *args, **kwargs):
-        raise NotImplementedError
-
-    @abstractmethod
     def visitID(self, id_node, *args, **kwargs):
         raise NotImplementedError
 

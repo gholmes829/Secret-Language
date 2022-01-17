@@ -35,10 +35,16 @@ class Expr(ASTNode):
 
 # operations
 class UnaryOp(Expr):
+    ops = {
+        '!': (lambda opd: not opd, 'l_not'),
+        '-': (lambda opd: -opd, 'negate'),
+    }
+
     def __init__(self, meta, operation, operand) -> None:
         super().__init__(meta)
-        self.operation = operation
+        self.op_str = operation
         self.operand = operand
+        self.op, self.name = UnaryOp.ops[operation]
     
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitUnaryOp(self, *args, **kwargs)
@@ -55,8 +61,8 @@ class BinOp(Expr):
         '<=': (lambda lhs, rhs: lhs <= rhs, 'lte'),
         '>': (lambda lhs, rhs: lhs > rhs, 'gt'),
         '>=': (lambda lhs, rhs: lhs >= rhs, 'gte'),
-        'or': (lambda lhs, rhs: lhs or rhs, 'l_or'),
         'and': (lambda lhs, rhs: lhs and rhs, 'l_and'),
+        'or': (lambda lhs, rhs: lhs or rhs, 'l_or'),
     }
 
     type_resolutions = {
@@ -78,21 +84,23 @@ class BinOp(Expr):
         ('or', bool, bool): (bool, bool, bool),
     }
 
-    def __init__(self, meta, lhs, operation, rhs) -> None:
+    def __init__(self, meta, lhs, op_str, rhs) -> None:
         super().__init__(meta)
-        self.op_str = operation
-        self.op, self.op_name = BinOp.ops[operation]
+        self.op_str = op_str
         self.lhs, self.rhs = lhs, rhs
+        self.op, self.op_name = BinOp.ops[op_str]
+        self.lhs_cast, self.rhs_cast, self.res_cast = None, None, None
+
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitBinOp(self, *args, **kwargs)
 
 # fn calls
 class Call(Expr):
-    def __init__(self, meta, identifier, actuals) -> None:
+    def __init__(self, meta, callee, actuals) -> None:
         super().__init__(meta)
-        self.identifier = identifier
-        self.actuals = actuals
+        self.callee = callee
+        self.actuals = list(filter(lambda arg: arg, actuals))
         self.values = []
 
     def accept(self, visitor, *args, **kwargs):
@@ -114,15 +122,45 @@ class Reference(Expr):
         super().__init__(*args, **kwargs)
 
 class ID(Reference):
-    def __init__(self, meta, id_token) -> None:
+    def __init__(self, meta, id_token, **kwargs) -> None:
         super().__init__(meta)
-        self.name = id_token.value
+        assert not isinstance(id_token, ID), ic(id_token, id_token.name)
+        self.name = id_token
+        self.mods = kwargs
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitID(self, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f'<ID "{self.name}" at {id(self)}>'
+
+
+# object values
+class Object(Expr):
+    def __init__(self, meta, obj_type) -> None:
+        super().__init__(meta)
+        self.type = obj_type
+
+    def accept(self, visitor, *args, **kwargs):
+        raise NotImplementedError
+
+
+class FnObj(Object):  # inherit from new Obj (differentiate primative from obj maybe)
+    def __init__(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, formals, body) -> None:
+        super().__init__(meta, FnType(meta, mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
+        self.identifier = str(id(self))
+        self.generics = generics
+        self.mutability_mod = mutability_mod
+        self.scope_mod = scope_mod
+        self.decorator = decorator
+        self.formals = formals or []
+        self.body = body
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitFnObj(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<"fn_obj" at {id(self)}>'
 
 
 # literals
@@ -135,6 +173,9 @@ class Literal(Expr):
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitLiteral(self, *args, **kwargs)
+
+    def __repr__(self):
+        return f'<"{__class__}" obj w/ val = "{self.value}" at {id(self)}>'
 
 # literals
 class NumLit(Literal):
@@ -168,31 +209,3 @@ class None_(Literal):
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNone(self, *args, **kwargs)
-
-
-# object values
-class Object(Expr):
-    def __init__(self, meta, obj_type) -> None:
-        super().__init__(meta)
-        self.type = obj_type
-
-    def accept(self, visitor, *args, **kwargs):
-        raise NotImplementedError
-
-
-class FnObj(Object):  # inherit from new Obj (differentiate primative from obj maybe)
-    def __init__(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, formals, body) -> None:
-        super().__init__(meta, FnType(mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
-        self.identifier = str(id(self))
-        self.generics = generics
-        self.mutability_mod = mutability_mod
-        self.scope_mod = scope_mod
-        self.decorator = decorator
-        self.formals = formals
-        self.body = body
-
-    def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnObj(self, *args, **kwargs)
-
-    def __repr__(self) -> str:
-        return f'<"fn_obj" at {id(self)}>'

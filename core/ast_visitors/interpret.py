@@ -2,131 +2,225 @@
 
 """
 
-from copy import deepcopy
+from abc import ABCMeta, abstractmethod
 from icecream import ic
+from core.ast_nodes.node import ASTNode
+import time
 
 from core.ast_visitors.visitor import Visitor
 from core import ast_nodes
 
 
 class ReturnInterrupt(Exception):
-    def __init__(self, ret_val) -> None:
-        super().__init__('Returning!!!')
-        self.ret_val = ret_val
+    def __init__(self, val) -> None:
+        super().__init__()
+        self.val = val
+
+class InternalCallable(metaclass = ABCMeta):
+    def __init__(self) -> None:
+        pass
+
+    @abstractmethod
+    def __call__(self, interpreter, *args):
+        raise NotImplementedError
+
+
+class InteralFunction(InternalCallable):
+    def __init__(self, fn_obj, closure) -> None:
+        super().__init__()
+        self.fn_obj = fn_obj
+        self.closure = closure
+
+    def __call__(self, interpreter: 'Interpreter', *args):
+        assert len(args) == len(self.fn_obj.formals)
+
+        with interpreter.enter_scope(self.fn_obj.name, self.closure):
+            for arg, formal in zip(args, self.fn_obj.formals):
+                interpreter.env.define(formal.name, arg)
+            try:
+                interpreter.interpret(self.fn_obj.body)
+            except ReturnInterrupt as RI:
+                    return RI.val
+            else:
+                return None
+
+
+# built ins
+class Clock(InternalCallable):
+    def __init__(self) -> None:
+        super().__init__()
+        self.type = float
+
+    def __call__(self, interpreter):
+        return time.time()
+    
+class Print(InternalCallable):
+    def __init__(self) -> None:
+        super().__init__()
+        self.type = 'void'
+
+    def __call__(self, interpreter, val):
+        print(str(val), flush = True)
+        # return val  # wont work yet bc need to template (?)
+
+# end built ins
+
+
+class Environment:
+    _builtins = builtin_globals = {
+        ('clock', Clock()),
+        ('print', Print())
+    } 
+    def __init__(self, name, enclosing = None) -> None:
+        self.scope = {}
+        self.name = name
+        self.enclosing = enclosing
+        if not enclosing:
+            for name, builtin in Environment._builtins:
+                self.define(name, builtin)
+
+
+    def define(self, name, val):
+        if name in self.scope:
+            raise ValueError(f'"{name}" is already defined with value "{val}".')
+        self.scope[name] = val
+
+    def get(self, name):
+        try:
+            return self.scope[name]
+        except KeyError:
+            if self.enclosing:
+                return self.enclosing.get(name)
+            raise AttributeError(f'Undefined variable "{name}".')
+        
+
+    def assign(self, name, val):
+        if name in self.scope:
+            self.scope[name] = val
+        elif self.enclosing:
+            return self.enclosing.assign(name, val)
+        else:
+            raise AttributeError(f'Undefined variable "{name}".')
+
+    def __repr__(self) -> str:
+        return f'<env object "{self.name}" at {id(self)}>'
 
 
 class Interpreter(Visitor):
     def __init__(self) -> None:
         super().__init__()
+        self.prev_envs = []
+        self.env = None
 
-    def visitRoot(self, root_node, symbol_table):
-        try:
-            start = symbol_table.symbols['globals.main'].type
-        except KeyError:
-            raise ValueError('Could not find main.')
+    def interpret(self, node: ast_nodes.ASTNode):
+        return node.accept(self)
 
-        with symbol_table.enter_scope('globals'):
-            for stmt in start.body:
-                stmt.accept(self, symbol_table)
+    def enter_scope(self, name, env = None):
+        self.prev_envs.append(self.env)
+        self.env = Environment(name, env or self.env)
+        return self
 
-    def visitPrint(self, print_node, symbol_table):
-        print_node.expr.accept(self, symbol_table)
-        print(print_node.expr.value, flush=True)
+    def exit_scope(self):
+        self.env = self.prev_envs.pop()
 
-    def visitID(self, id_node, symbol_table):
-        pass
+    def __enter__(self):
+        return self
 
-    def visitAssign(self, assign_node, symbol_table):
-        assign_node.rhs.accept(self, symbol_table)
-        assign_node.lhs.value = assign_node.rhs.value
+    def __exit__(self, *_):
+        self.exit_scope()
+
+    def visitLiteral(self, literal_node: ast_nodes.Literal):
+        return literal_node.value
+
+    def visitNumLit(self, num_lit_node):
+        return self.interpret(super(ast_nodes.NumLit, num_lit_node))
+
+    def visitStrLit(self, str_lit_node):
+        return self.interpret(super(ast_nodes.StrLit, str_lit_node))
+
+    def visitBoolLit(self, bool_lit_node):
+        return self.interpret(super(ast_nodes.BoolLit, bool_lit_node))
+
+    def visitNone(self, none_node):
+        return self.interpret(super(ast_nodes.None_, none_node))
+
+    def visitUnary(self, unary_node: ast_nodes.UnaryOp):
+        value = self.interpret(unary_node.operand)
+        return unary_node.op(value)
+
+    def visitBinOp(self, bin_op_node: ast_nodes.BinOp):
+        lhs_value = bin_op_node.lhs_cast(self.interpret(bin_op_node.lhs))
+        rhs_value = bin_op_node.rhs_cast(self.interpret(bin_op_node.rhs))
+        return bin_op_node.res_cast(bin_op_node.op(lhs_value, rhs_value))
+
+    def visitAssignDecl(self, ad_node):
+        val = self.interpret(ad_node.rhs)
+        self.env.define(ad_node.lhs.name, val)
+
+    def visitID(self, id_node):
+        return self.env.get(id_node.name)
+
+    def visitAssign(self, assign_node):
+        val = self.interpret(assign_node.rhs)
+        self.env.assign(assign_node.name, val)
+        return val
+
+    def visitNodeList(self, node_list_node):
+        for node in node_list_node:
+            self.interpret(node)
+
+    def visitIf(self, if_node: ast_nodes.If):
+        for cond, body, _ in if_node.branch_seq:  # TODO add truthiness here!
+            val = self.interpret(cond)
+            if not val: continue
+            self.interpret(body)
+
+    def visitWhile(self, while_node: ast_nodes.While):
+        while self.interpret(while_node.condition):
+            self.interpret(while_node.body)
+
+    def visitFor(self, for_node: ast_nodes.For):
+        # desugar and make this actually work
+        self.env.define(for_node.identifier.name, 0)
+        val = self.interpret(for_node.iterable)
+        for i in range(int(val)):
+            self.interpret(for_node.body)
+            self.env.assign(for_node.identifier.name, i + 1)
+
+    def visitCall(self, call_node: ast_nodes.Call):
+        callee = self.interpret(call_node.callee)
+        args = [self.interpret(arg) for arg in call_node.actuals]
+        with self.enter_scope(call_node.callee.name):
+            assert isinstance(callee, InternalCallable)
+            return callee(self, *args)
+    
+    def visitRoot(self, root_node):
+        with self.enter_scope('globals'):
+            self.interpret(root_node.globals)
+
+    def visitFnObj(self, fn_def_node):
+        new_fn = InteralFunction(fn_def_node, self.env)
+        #self.env.define(fn_def_node.name, new_fn)
+        return new_fn
+
+    def visitReturn(self, return_node):
+        raise ReturnInterrupt(self.interpret(return_node.expr))
+
+
+
+    # ------
+
+
+    def visitAssign(self, assign_node):
+        val = self.interpret(assign_node.rhs)
+        # assign_node.lhs.value = assign_node.rhs.value
         assign_node.lhs.type = assign_node.rhs.type
-        
+        self.env.assign(assign_node.lhs.name, val)
+        return val
 
-    def visitBinOp(self, bin_op_node: ast_nodes.BinOp, symbol_table):
-        bin_op_node.lhs.accept(self, symbol_table)
-        bin_op_node.rhs.accept(self, symbol_table)
-        lhs_val = bin_op_node.lhs.value
-        rhs_val = bin_op_node.rhs.value
-        bin_op_node.value = bin_op_node.type(bin_op_node.op(bin_op_node.lhs_cast(lhs_val), bin_op_node.rhs_cast(rhs_val)))
-
-
-    def visitCall(self, call_node, symbol_table):
-        og_fn_sym = call_node.identifier.symbol.type
-        with symbol_table.enter_scope(og_fn_sym.identifier):
-            for actual in call_node.actuals:
-                actual.accept(self, symbol_table)
-
-            fn_sym = deepcopy(og_fn_sym)
-            fn_body = fn_sym.body
-            formals = fn_sym.formals
-
-            for formal, actual in zip(formals, call_node.actuals):
-                formal.symbol.value = actual.value
-
-            for stmt in fn_body:
-                try:
-                    stmt.accept(self, symbol_table)
-                except ReturnInterrupt as RI:
-                    call_node.value = RI.ret_val
-                    try:
-                        call_node.type = RI.ret_val.type
-                    except:
-                        call_node.type = RI.ret_val
-                    break
-
-
-    def visitReturn(self, return_node, symbol_table):
-        return_node.expr.accept(self, symbol_table)
-        return_node.value = return_node.expr.value
-        raise ReturnInterrupt(return_node.expr.value)
-
-
-    def visitIf(self, if_node, symbol_table):
-        for cond, body, block_type in if_node.if_sequence:
-            if cond:
-                cond.accept(self, symbol_table)
-                if not cond.value:
-                    continue
-            
-            for stmt in body:
-                stmt.accept(self, symbol_table)
-
-            break
-
-    def visitFor(self, for_node, symbol_table):
-        for_node.identifier.value = 0
-        for_node.iterable.accept(self, symbol_table)
-        for i in range(int(for_node.iterable.value)):
-            for stmt in for_node.body:
-                stmt.accept(self, symbol_table)
-            for_node.iterable.accept(self, symbol_table)
-            for_node.identifier.value = i + 1
-
-    def visitWhile(self, while_node, symbol_table):
-        while_node.condition.accept(self, symbol_table)
-
-        while while_node.condition.value:
-            for stmt in while_node.body:
-                stmt.accept(self, symbol_table)
-            while_node.condition.accept(self, symbol_table)
 
     def visitPrimitiveType(self, obj_type_node, symbol_table):
         raise NotImplementedError
 
-    def visitFnType(self, fn_def_node, symbol_table):
-        pass
-
-    def visitFnSignature(self, fn_sig_node, *args, **kwargs):
-        pass
-
-    def visitLiteral(self, literal_node, symbol_table):
-        raise NotImplementedError
-
-    def visitNumLit(self, num_lit_node, symbol_table):
-        pass
-
-    def visitStrLit(self, str_lit_node, symbol_table):
-        pass
-
-    def visitBoolLit(self, bool_lit_node, symbol_table):
+    def visitFnType(self, fn_sig_node, *args, **kwargs):
         pass

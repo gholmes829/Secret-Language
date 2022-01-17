@@ -9,7 +9,6 @@
 # for fn calls, each fn call gets own env to protect recursions
 
 
-import core.env as sa
 from core.ast_visitors import SemanticAnalyzer as SA, Unparser, GraphManager, Interpreter
 from core import ReturnInterrupt
 
@@ -17,8 +16,10 @@ from core import ReturnInterrupt
 class AST:
     def __init__(self, root) -> None:
         self.root = root
-        self.symbol_table = sa.SymbolTable()
-        self.root.accept(SA(), self.symbol_table)
+        self.bind_and_resolve()
+
+    def bind_and_resolve(self):
+        SA().resolve(self.root)
 
     def unparsed(self):
         return self.root.accept(Unparser(), 0)
@@ -32,11 +33,12 @@ class AST:
         interpreter = Interpreter()
         exit_code = None
         try:
-            self.root.accept(interpreter, self.symbol_table)
+            interpreter.interpret(self.root)
         except ReturnInterrupt as RI:
             exit_code = int(RI.ret_val)
         else:
-            raise ValueError('Did not recieve any exit code...')
+            pass
+            # raise ValueError('Did not recieve any exit code...')
         
         return exit_code
     

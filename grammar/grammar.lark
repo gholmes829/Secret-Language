@@ -26,8 +26,10 @@
 // https://medium.com/@kasperpeulen/10-features-from-various-modern-languages-that-i-would-like-to-see-in-any-programming-language-f2a4a8ee6727:
 // implicit name ("it") for single param lambda functions
 // cascade / spread operator? (merge objects)
-// automatic currying (https://reasonml.github.io/docs/en/function.html#currying)
+// automatic currying (https://reasonml.github.io/docs/en/function.html#currying) (or partial functions? func.partial(a = 2, b = 2) for func(a, b, c) { return a + b + c}. See C++ bind, specialization)
 // function and class extensions
+//
+// consider letting var decl without assignment
 
 // Tentative:
 // ======================
@@ -68,10 +70,6 @@
 // allow user to parameterize their classes with <>? as generic?
 // should "as" keyword be more generalized?
 
-%import common.SIGNED_NUMBER
-%import common._STRING_ESC_INNER -> STRING_INNER
-%import common.CNAME
-
 
 // GLOBAL
 // ======
@@ -83,6 +81,7 @@ globals: global*
     | assign_decl
     | fn_def
     | cls_def
+    | call  // temporary, DELETE
 
 COMMENT: "#" /[^\n]/*
 %ignore COMMENT
@@ -106,7 +105,6 @@ WS: /[ \t\f\r\n]/+
     | throw
     | import
     | call
-    | "print" "(" expr ")" -> print_call  // tmp for testing DELETE
 
 
 // <- Control Statements ->
@@ -158,11 +156,11 @@ exprs: expr ("," expr)*
 // variable
 assign_decl: "let" declared_identifiers "=" exprs  // multiple on both sides for unpacking
 declared_identifiers: declared_identifier ("," declared_identifier)*
-declared_identifier: [mutability_modifier] [scope_modifier] [execution_modifier] simple_id
+declared_identifier: [mutability_modifier] [scope_modifier] [execution_modifier] CNAME
 
-alias_assign: scoped_ids "as" scoped_ids  // might need to double check this later on
+alias_assign: lvals "as" scoped_ids  // might need to double check this later on
 
-assign: scoped_ids "=" exprs
+assign: lvals "=" exprs
 
 
 // <- Definitions ->
@@ -179,7 +177,7 @@ fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simp
 formals: formal ("," formal)*
 formal: type_ simple_id
 
-generics: "generics" "<" simple_ids ">"
+generics: "template" "<" simple_ids ">"
 
 
 // <- Scoping ->
@@ -214,15 +212,16 @@ parameterized_object_type: object_type [parameterization]
 ?!mutability_modifier: "const"
 ?!scope_modifier: "static" | "global"
 ?!execution_modifier: "channel"
-    
+
 // primitive types
 ?!primitive_type: "bool"
     | "num"
     | "str"
     | "nonetype"
+    | "void"
 
 // object types
-object_type: fn_type
+?object_type: fn_type
     | scoped_id
 
 ?fn_type: [mutability_modifier] [scope_modifier] "(" "[" [types] "]" "->" type_ ")"  // change this to align w py typing module
@@ -289,7 +288,7 @@ deffered: expr "where" scoped_id "=" expr
 
 
 // <- Call ->
-call: term "(" [actuals] ")"  // should allow chaining
+call.1: term "(" [actuals] ")"  // should allow chaining
 ?actuals: actual ("," actual)*
 ?actual: expr
     | simple_id "=" expr -> kwarg
@@ -322,7 +321,7 @@ anon_fns: anon_fns ("," anon_fns)*
 anon_fn: "(" formals ")" "=>" type_ block  // this is an expr that contains stmts ...tricky
 
 // containers
-containers: sets | lists | tuples | dicts
+containers: sets | lists | tuples | dicts  // should there be list of x comprehensions here?
 container: set | list | tuple | dict | set_comp | list_comp | dict_comp
 
 sets: set ("," set)*
@@ -366,3 +365,8 @@ NINF: "ninf"
 
 // END EXPR
 // ========
+
+
+%import common.SIGNED_NUMBER
+%import common._STRING_ESC_INNER -> STRING_INNER
+%import common.CNAME

@@ -5,23 +5,26 @@
 from core.ast_nodes.stmts import AssignDecl, If
 from core.ast_visitors.visitor import Visitor
 from core import ast_nodes
-
+# TODO: change "node.accept(self..." to "self.unparse(node..."
 
 class Unparser(Visitor):
     def __init__(self) -> None:
         super().__init__()
 
+    def unparse(self, node: ast_nodes.ASTNode, depth: int):
+        node.accept(self, depth)
+
     def visitRoot(self, print_root, depth):
-        return '\n'.join(glbl.accept(self, depth) for glbl in print_root.globals)
+        return '\n'.join(self.unparse(glbl, depth) for glbl in print_root.globals)
 
     def visitPrint(self, print_node, depth):
-        return depth * '\t' + f'print({print_node.expr.accept(self, depth)})'
+        return depth * '\t' + f'print({self.unparse(print_node.expr, depth)})'
 
     def visitID(self, id_node, depth):
         return str(id_node.name)
 
     def visitAssignDecl(self, ad_node: AssignDecl, depth):
-        return depth * '\t' + f'let {ad_node.mutability or ""} {ad_node.scope or ""} {ad_node.lhs.accept(self, depth)} = {ad_node.rhs.accept(self, depth)}'
+        return depth * '\t' + f'let {ad_node.mutability or ""} {ad_node.scope or ""} {self.unparse(ad_node.lhs, depth)} = {self.unparse(ad_node.rhs, depth)}'
 
     def visitAssign(self, assign_node, depth):
         return depth * '\t' + f'{assign_node.lhs.accept(self, depth)} = {assign_node.rhs.accept(self, depth)}'
