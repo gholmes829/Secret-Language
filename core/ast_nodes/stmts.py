@@ -2,6 +2,8 @@
 
 """
 
+from icecream import ic
+
 from core.ast_nodes.node import ASTNode
 
 # stmts
@@ -30,18 +32,6 @@ class Branch(Stmt):
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitBranch(self, *args, **kwargs)
-
-
-class For(Stmt):
-    def __init__(self, meta, identifier, iterable, body, else_block) -> None:
-        super().__init__(meta)
-        self.identifier = identifier
-        self.iterable = iterable
-        self.body = body
-        self.else_block = else_block
-
-    def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFor(self, *args, **kwargs)
 
 
 class While(Stmt):

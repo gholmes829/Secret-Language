@@ -12,7 +12,7 @@ class Unparser(Visitor):
         super().__init__()
 
     def unparse(self, node: ast_nodes.ASTNode, depth: int):
-        node.accept(self, depth)
+        return node.accept(self, depth)
 
     def visitRoot(self, print_root, depth):
         return '\n'.join(self.unparse(glbl, depth) for glbl in print_root.globals)
@@ -33,7 +33,7 @@ class Unparser(Visitor):
         return f'({bin_op_node.lhs.accept(self, depth)} {bin_op_node.op_str} {bin_op_node.rhs.accept(self, depth)})'
 
     def visitCall(self, call_node, depth):
-        id_unparsed = call_node.identifier.accept(self, depth)
+        id_unparsed = call_node.name.accept(self, depth)
         actuals_unparsed = ", ".join(formal.accept(self, depth) for formal in call_node.actuals)
         return f'{id_unparsed}({actuals_unparsed})'
 
@@ -49,11 +49,6 @@ class Unparser(Visitor):
             res += '\n' + (depth * '\t') + '}\n'
 
         return res
-
-    def visitFor(self, for_node, depth):
-        indent_offset = depth * '\t'
-        body_unparsed = ('\n' + indent_offset).join(stmt.accept(self, depth + 1) for stmt in for_node.body)
-        return depth * '\t' + f'for {for_node.identifier.accept(self, depth)} in {for_node.iterable.accept(self, depth)} {{\n{body_unparsed}\n{indent_offset}}}'
 
     def visitWhile(self, while_node, depth):
         indent_offset = depth * '\t'

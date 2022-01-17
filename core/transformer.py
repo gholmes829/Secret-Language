@@ -53,7 +53,16 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         meta.loop_type = loop_type
         return While(true_cond, body, else_block)
 
-    for_ = For  # TODO: desugar for_
+    def for_(self, meta, identifier, iterable, body, else_block):
+        # need to implement else_block
+        assign_node = AssignDecl(meta, identifier, NumLit('0'), None, None, None)
+        cond = BinOp(meta, identifier, '!=', iterable)
+        inc = BinOp(meta, identifier, '+', NumLit('1'))
+        assign_node2 = Assign(meta, identifier, inc)
+        body.nodes += (assign_node2,)
+        while_node = While(meta, cond, body)
+        return NodeList(meta, [assign_node, while_node], 'while')
+
     return_ = lambda _, meta, expr: Return(meta, expr or None_(meta))
 
     # assignment

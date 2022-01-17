@@ -13,6 +13,7 @@ class ScopeStack:
     def __init__(self) -> None:
         self.scopes = [{}]
         self.names = ['globals']
+        # add builtins to global here
 
     @property
     def top(self):
@@ -64,30 +65,33 @@ class SemanticAnalyzer(Visitor):
         self.scopes.top[node.name]['init'] = True
 
     def get_type(self, node):
-        if node.name == 'clock': return float
-        elif node.name == 'print': return 'void'  # hard coded for now, need to find way to add builtins to semantic analysis
+        class Dummy1:
+            def __init__(self, val) -> None:
+                self.type = val
+        class Dummy2:
+            def __init__(self, val) -> None:
+                self.ret_type = Dummy1(val)
+        if node.name == 'clock': return Dummy2(float)
+        elif node.name == 'print': return Dummy2('void')  # hard coded for now, need to find way to add builtins to semantic analysis
 
         for scope in reversed(self.scopes):
             if node.name in scope:
                 return scope[node.name]['type']
         raise ValueError(f'Could not retrieve type for "{node.name}"')
 
-    def set_type(self, node, type):
-
-        if node.name in {'clock', 'print'}: return float  # hard coded for now, need to find way to add builtins to semantic analysis
-
+    def set_type(self, node, type_):
         for scope in reversed(self.scopes):
             if node.name in scope:
-                return scope[node.name]['type']
-        raise ValueError(f'Could not retrieve type for "{node.name}"')
+                scope[node.name]['type'] = type_
+                return
+        raise ValueError(f'Could not set type for "{node.name}"')
 
     def resolve_local(self, node: ast_nodes.ASTNode):
         assert hasattr(node, 'name')
-        if not hasattr(node, 'name'):
-            return  # move this to caller side? maybe not needed
         for i, (scope, name) in enumerate(list(zip(self.scopes.scopes, self.scopes.names))[::-1][:-1]):
+            assert name != 'globals'  # hopefully no one names their function globals until this gets fixed
             if node.name in scope:
-                self.interpreter.resolve(node, i)  # whats this?
+                self.interpreter.resolve(node, i)
                 break
 
     def resolve_function(self, node: ast_nodes.ASTNode):
@@ -99,27 +103,34 @@ class SemanticAnalyzer(Visitor):
 
     def visitRoot(self, root_node):
         assert self.scopes
-        for glbl in root_node.globals:
-            self.resolve(glbl)
+        self.resolve(root_node.globals)
 
     def visitAssignDecl(self, ad_node):
         # I think this is equiv to varStmt from book
-        ad_node.lhs.type = ad_node.rhs.type
         self.declare(ad_node.lhs)
-        self.resolve(ad_node.rhs)  # skip if init null and can just decl wo assign
+        if isinstance(ad_node.rhs, ast_nodes.FnObj):
+            # have to do this since desugared fn def ...maybe not a good idea in retrospect
+            # otherwise have issue with recursion and closures depending on placement of set type stmt
+            try:
+                self.set_type(ad_node.lhs, ad_node.rhs.type)
+            except Exception as e:
+                pass
+                raise
+        self.resolve(ad_node.rhs)  # can skip if enable plain decl wo assign
+        self.set_type(ad_node.lhs, ad_node.rhs.type)
         self.define(ad_node.lhs)
 
     def visitID(self, id_node):
         # I think this is varExpr from book
         if id_node.name in self.scopes.top and not self.scopes.top[id_node.name]['init']:
             raise ValueError('Variable can not reference itself in initializer.')
-        id_node.type = self.get_type(id_node)
+        id_node.type = self.get_type(id_node)  # hopefully not needed after type resolution
         self.resolve_local(id_node)
 
     def visitAssign(self, assign_node):
         # should add type define to scopes?
-        assign_node.lhs.type = assign_node.rhs.type
         self.resolve(assign_node.rhs)
+        self.set_type(assign_node.lhs, assign_node.rhs.type)
         self.resolve_local(assign_node.lhs)
 
     def visitFnObj(self, fn_obj_node):
@@ -134,13 +145,6 @@ class SemanticAnalyzer(Visitor):
             self.resolve(branch.cond)
             self.resolve(branch.body)
 
-    def visitFor(self, for_node):
-        # need to desugarrrrr
-        self.declare(for_node.identifier)
-        self.resolve(for_node.iterable)
-        self.define(for_node.identifier)
-        self.resolve(for_node.body)
-
     def visitReturn(self, return_node):
         self.resolve(return_node.expr)
 
@@ -153,6 +157,7 @@ class SemanticAnalyzer(Visitor):
         self.resolve(bin_op_node.rhs)
         bin_op_node.lhs_cast, bin_op_node.rhs_cast, bin_op_node.res_cast = \
             bin_op_node.type_resolutions[bin_op_node.op_str, bin_op_node.lhs.type, bin_op_node.rhs.type]
+        bin_op_node.type = bin_op_node.res_cast
 
     def visitUnaryOp(self, un_op_node):
         self.resolve(un_op_node.operand)
@@ -161,9 +166,10 @@ class SemanticAnalyzer(Visitor):
             un_op_node.type_resolutions[un_op_node.op_str, un_op_node.lhs.type, un_op_node.rhs.type]
 
     def visitCall(self, call_node):
-        self.resolve(call_node.callee)
+        self.resolve(call_node.name)
         self.resolve(call_node.actuals)
-        call_node.type = self.get_type(call_node.callee)
+        type_ = self.get_type(call_node.name).ret_type.type
+        call_node.type = type_
 
     def visitLiteral(self, literal_node):
         raise NotImplementedError

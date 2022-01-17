@@ -98,11 +98,11 @@ class BinOp(Expr):
 
 # fn calls
 class Call(Expr):
-    def __init__(self, meta, callee, actuals) -> None:
+    def __init__(self, meta, name, actuals) -> None:
         super().__init__(meta)
-        self.callee = callee
+        self.name = name
         self.actuals = NodeList(meta, list(filter(lambda arg: arg, actuals)), 'actuals')
-        self.values = []
+        # self.values = []
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitCall(self, *args, **kwargs)

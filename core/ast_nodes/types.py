@@ -42,6 +42,7 @@ class FnType(ObjectType):
         self.scope_modifier = scope_mod
         self.ret_type = ret_type
         self.formal_types = formal_types
+        self.type = self
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitFnType(self, *args, **kwargs)

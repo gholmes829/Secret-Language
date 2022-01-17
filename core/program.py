@@ -18,6 +18,7 @@ from core import ReturnInterrupt
 class Program:
     def __init__(self, ast) -> None:
         self.ast = ast
+        # print(self.unparsed())
         self.interpreter = Interpreter()
         SA(self.interpreter).resolve(self.ast)
 

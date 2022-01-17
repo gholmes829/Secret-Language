@@ -132,28 +132,6 @@ class GraphManager(Visitor):
 
         return if_stmt_node
 
-    def visitFor(self, for_node, graph):
-        kw_node = for_node.make_pydot_node(label = 'for')
-        graph.add_node(kw_node)
-
-        identifier_node = for_node.identifier.accept(self, graph)
-        assert kw_node and identifier_node
-        graph.add_edge(pydot.Edge(kw_node, identifier_node))
-
-        iterable_node = for_node.iterable.accept(self, graph)
-        assert iterable_node
-        graph.add_edge(pydot.Edge(kw_node, iterable_node))
-        body_node = pydot.Node(str(hash((tuple(for_node.body), 'for', graph))), label = 'body')
-        graph.add_node(body_node)
-        assert body_node
-        graph.add_edge(pydot.Edge(kw_node, body_node))
-        for stmt in for_node.body:
-            stmt_node = stmt.accept(self, graph)
-            assert stmt_node
-            graph.add_edge(pydot.Edge(body_node, stmt_node))
-
-        return kw_node
-
     def visitWhile(self, while_node, graph):
         kw_node = while_node.make_pydot_node(label = 'while')
         graph.add_node(kw_node)

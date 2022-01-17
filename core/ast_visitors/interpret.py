@@ -10,7 +10,7 @@ import time
 from core.ast_visitors.visitor import Visitor
 from core import ast_nodes
 
-# could make builtsins their own special scope before globals
+# could make builtins their own special scope before globals
 
 
 class ReturnInterrupt(Exception):
@@ -51,7 +51,7 @@ class InteralFunction(InternalCallable):
 class Clock(InternalCallable):
     def __init__(self) -> None:
         super().__init__()
-        self.type = float
+        self.ret_type = 'void'
 
     def __call__(self, interpreter):
         return time.time()
@@ -59,7 +59,7 @@ class Clock(InternalCallable):
 class Print(InternalCallable):
     def __init__(self) -> None:
         super().__init__()
-        self.type = 'void'
+        self.ret_type = 'void'
 
     def __call__(self, interpreter, val):
         print(str(val), flush = True)
@@ -83,8 +83,8 @@ class Environment:
 
 
     def define(self, name, val):
-        if name in self.scope:
-            raise ValueError(f'"{name}" is already defined with value "{val}".')
+        #if name in self.scope:
+        #    raise ValueError(f'"{name}" is already defined with value "{val}".')  # might want to enable this but wld break mult for loop
         self.scope[name] = val
 
     def get(self, name):
@@ -203,28 +203,20 @@ class Interpreter(Visitor):
             self.interpret(node)
 
     def visitIf(self, if_node: ast_nodes.If):
-        for cond, body, _ in if_node.branch_seq:  # TODO add truthiness here!
-            val = self.interpret(cond)
+        for branch in if_node.branch_seq:  # TODO add truthiness here!
+            val = self.interpret(branch.cond)
             if not val: continue
-            self.interpret(body)
+            self.interpret(branch.body)
 
     def visitWhile(self, while_node: ast_nodes.While):
         while self.interpret(while_node.condition):
             self.interpret(while_node.body)
 
-    def visitFor(self, for_node: ast_nodes.For):
-        # desugar and make this actually work
-        self.env.define(for_node.identifier.name, 0)
-        val = self.interpret(for_node.iterable)
-        for i in range(int(val)):
-            self.interpret(for_node.body)
-            self.env.assign(for_node.identifier.name, i + 1)
-
     def visitCall(self, call_node: ast_nodes.Call):
-        callee = self.interpret(call_node.callee)
+        name = self.interpret(call_node.name)
         args = [self.interpret(arg) for arg in call_node.actuals]
-        assert isinstance(callee, InternalCallable)
-        return callee(self, *args)
+        assert isinstance(name, InternalCallable)
+        return name(self, *args)
     
     def visitRoot(self, root_node):
         # with self.enter_scope('globals'):  # before initializing globals in __init__

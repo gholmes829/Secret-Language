@@ -42,10 +42,6 @@ class Visitor(metaclass = ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def visitFor(self, for_node, *args, **kwargs):
-        raise NotImplementedError
-
-    @abstractmethod
     def visitWhile(self, while_node, *args, **kwargs):
         raise NotImplementedError
 
