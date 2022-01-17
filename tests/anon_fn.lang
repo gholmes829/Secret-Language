@@ -1,9 +1,9 @@
-// will anonomous fns work?
+# will anonomous fns work?
 
 void call(([num] -> num) cb, num arg) {
     print(cb(arg))
 }
 
 call((num arg) -> num {
-    return arg * 2
+    return arg * 2  # double trouble
 }, 5)
