@@ -214,6 +214,11 @@ class Interpreter(Visitor):
 
     def visitCall(self, call_node: ast_nodes.Call):
         name = self.interpret(call_node.name)
+
+        #for a in call_node.actuals:
+        #    for a_ in a:
+        #        ic(a_)
+        #input()
         args = [self.interpret(arg) for arg in call_node.actuals]
         assert isinstance(name, InternalCallable)
         return name(self, *args)

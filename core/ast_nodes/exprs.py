@@ -4,6 +4,7 @@
 
 import lark
 from icecream import ic
+from pydot import Node
 
 from core.ast_nodes.node import ASTNode, NodeList
 from core.ast_nodes.types import FnType
@@ -102,7 +103,8 @@ class Call(Expr):
         super().__init__(meta)
         self.name = name
         self.actuals = NodeList(meta, list(filter(lambda arg: arg, actuals)), 'actuals')
-        # self.values = []
+        if isinstance(self.actuals, NodeList) and len(self.actuals) == 1 and isinstance(self.actuals[0], NodeList):
+            self.actuals = self.actuals[0]
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitCall(self, *args, **kwargs)

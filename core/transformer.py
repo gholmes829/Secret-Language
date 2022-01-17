@@ -127,6 +127,22 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     def fn_type(self, meta, mutability_mod, scope_mod, formal_types, ret_type):
         return FnType(meta, mutability_mod, scope_mod, ret_type, formal_types or [])
 
+    def anon_fn(self, meta, formals, ret_type, body):
+        fn = FnObj(
+            meta,
+            None,
+            None,
+            None,
+            None,
+            ret_type,
+            formals or NodeList(meta, [], 'formals'),
+            body
+        )
+
+        fn.name = id(fn)  # this may be un-ideal
+        
+        return fn
+
     # TYPING
     def type_(self, meta, type_token, execution_modifier):
         if isinstance(type_token, FnType):

@@ -1,0 +1,5 @@
+num add(num opd1, num opd2) {
+    return opd1 + opd2
+}
+
+print(add(2, 3))

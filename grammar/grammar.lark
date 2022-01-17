@@ -30,6 +30,8 @@
 // function and class extensions
 //
 // consider letting var decl without assignment
+// allow traditional for loops ( for (let i = 0; i < 10; i++) {} ) in addition to curr
+// access dictionaries using ".key" in addition to "['key']"
 
 // Tentative:
 // ======================
@@ -315,10 +317,10 @@ literals: literal ("," literal)*
 
 // objects
 objects: anon_fns
-object: anon_fn | container
+?object: anon_fn | container
 
 anon_fns: anon_fns ("," anon_fns)*
-anon_fn: "(" formals ")" "=>" type_ block  // this is an expr that contains stmts ...tricky
+anon_fn: "(" formals ")" "->" type_ block  // this is an expr that contains stmts ...tricky
 
 // containers
 containers: sets | lists | tuples | dicts  // should there be list of x comprehensions here?

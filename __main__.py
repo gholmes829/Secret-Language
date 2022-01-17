@@ -41,6 +41,17 @@ def cache_ast(ast, src):
     with open(out_pickle_file, 'wb') as f:
         dill.dump(ast, f)
 
+def sub_pass(raw_prog):
+    # probably isn't super necessary
+    prog = ''
+    for line in raw_prog.split('\n'):
+        try:
+            filtered = line[:line.index('#')]
+        except:
+            filtered = line
+        prog += filtered.replace(';', '\n')
+    return prog
+
 def main():
     args = get_cmd_line_args()
 
@@ -49,7 +60,8 @@ def main():
         with open(args.src_f, 'rb') as f:
             sys.exit(dill.load(f).interpret())
 
-    prog = utils.read_file(args.src_f)
+    raw_prog = utils.read_file(args.src_f)
+    prog = sub_pass(raw_prog)
 
     if PARSER_TYPE == 'earley':
         parser = lark.Lark.open(

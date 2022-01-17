@@ -24,7 +24,7 @@ class Unparser(Visitor):
         return str(id_node.name)
 
     def visitAssignDecl(self, ad_node: AssignDecl, depth):
-        return depth * '\t' + f'let {ad_node.mutability or ""} {ad_node.scope or ""} {self.unparse(ad_node.lhs, depth)} = {self.unparse(ad_node.rhs, depth)}'
+        return depth * '\t' + f'let {self.unparse(ad_node.lhs, depth)} = {self.unparse(ad_node.rhs, depth)}'
 
     def visitAssign(self, assign_node, depth):
         return depth * '\t' + f'{assign_node.lhs.accept(self, depth)} = {assign_node.rhs.accept(self, depth)}'
@@ -84,3 +84,9 @@ class Unparser(Visitor):
 
     def visitNone(self, none_node, depth):
         return str(none_node.value)
+
+    def visitNodeList(self, node_list_node, depth):
+        res = ''
+        for node in node_list_node:
+            res += self.unparse(node, depth)
+        return res

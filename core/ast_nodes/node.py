@@ -50,6 +50,9 @@ class NodeList(ASTNode):
     def __len__(self):
         return len(self.nodes)
 
+    def __getitem__(self, idx):
+        return self.nodes[idx]
+
     def __iter__(self):
         return self.nodes.__iter__()
 
