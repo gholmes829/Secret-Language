@@ -143,6 +143,9 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         
         return fn
 
+    def cls_def(self, meta, *args):
+        raise NotImplementedError
+
     # TYPING
     def type_(self, meta, type_token, execution_modifier):
         if isinstance(type_token, FnType):
@@ -160,7 +163,12 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         return inner
 
     # identifiers
-    scoped_id = ID
+    def scoped_id(self, meta, *args):
+        joined = '.'.join(args)
+        id_ = ID(meta, joined)
+        id_.all_ids = args
+        return id_
+
     simple_id = ID
 
     # call

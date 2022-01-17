@@ -166,6 +166,8 @@ class FnObj(Object):  # inherit from new Obj (differentiate primative from obj m
         return f'<"fn_obj" at {id(self)}>'
 
 
+
+
 # literals
 class Literal(Expr):
     dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgreen', shape='diamond')

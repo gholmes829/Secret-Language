@@ -32,6 +32,8 @@
 // consider letting var decl without assignment
 // allow traditional for loops ( for (let i = 0; i < 10; i++) {} ) in addition to curr
 // access dictionaries using ".key" in addition to "['key']"
+// pass variables by reference
+
 
 // Tentative:
 // ======================

@@ -1,0 +1,9 @@
+# very basic class
+
+class Circle {
+    void init(num radius) {
+        this.radius = radius
+    }
+}
+
+let small_circle = Circle(2)

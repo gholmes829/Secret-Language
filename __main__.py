@@ -73,6 +73,10 @@ def main():
         )
         transformer = ASTBuilder()
         parse_tree = parser.parse(prog)
+        png_path = args.src_f.replace('.lang', '.png')
+        if not osp.isfile(png_path) or osp.getmtime(args.src_f) > osp.getmtime(png_path):
+            lark.tree.pydot__tree_to_png(parse_tree, png_path, rankdir='TB')
+
         ast = transformer.transform(parse_tree)
 
     else:
