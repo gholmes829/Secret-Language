@@ -42,7 +42,7 @@ class InternalInstance:
         self.fields[name] = val
 
     def __repr__(self):
-        return f'<Internal Instance of "{self.klass.name}" at {id(self)}>'
+        return f'<Internal Instance of "{self.klass.name}">'
 
 class InternalClass(InternalCallable):
     def __init__(self, name, superclass, methods) -> None:
@@ -65,7 +65,7 @@ class InternalClass(InternalCallable):
         return instance
 
     def __repr__(self):
-        return f'<Internal Class, "{self.name}", at {id(self)}>'
+        return f'<Internal Class, "{self.name}">'
 
 class InternalFunction(InternalCallable):
     def __init__(self, fn_obj, closure, is_initializer) -> None:
@@ -94,6 +94,8 @@ class InternalFunction(InternalCallable):
                     return self.closure.getAt(0, 'this')
                 return None
 
+    def __repr__(self):
+        return f'<Internal Function, "{self.fn_obj.name}">'
 
 # built ins
 class Clock(InternalCallable):

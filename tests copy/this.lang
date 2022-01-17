@@ -1,0 +1,44 @@
+# testing this binding
+
+class Cake {
+    void taste() {
+        print('tasting')
+        print(this.flavor)
+    }
+
+    void set_flavor(str flavor) {
+        print('setting flavor')
+        this.flavor = flavor   
+    }
+
+    void set_yummy(num y) {
+        this.yum = y
+    }
+
+    void double_yummy() {
+        this.yum = this.yum * 2
+    }
+
+    void check_yummy() {
+        print(this.yum)
+    }
+}
+
+num main() {
+    let cake1 = Cake()
+    cake1.flavor = 'German chocolate'
+    cake1.taste()
+
+    let cake2 = Cake()
+    cake2.set_flavor('cheesecake')
+    cake2.taste()
+
+    cake2.set_yummy(5)
+    cake2.check_yummy()
+    cake2.double_yummy()
+    cake2.check_yummy()
+
+    return 0
+}
+
+main()

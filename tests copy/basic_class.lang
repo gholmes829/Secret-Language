@@ -1,0 +1,25 @@
+# very basic class
+
+class Circle {
+    let pi = 3.14
+
+    void init(num radius) {
+        print('initializing')
+    }
+
+    num get_radius() {
+        print('radius')
+    }
+}
+
+num main() {
+    print(Circle)
+    let bb_circle = Circle(2)
+    bb_circle.radius = 3
+    print(bb_circle.radius)
+    bb_circle.init(10)
+    print(bb_circle)
+    return 0
+}
+
+main()

@@ -1,0 +1,15 @@
+# stealing init should return this
+
+class Foo {
+    void init() {  # TODO change fn signature so init returns Foo
+        print(this)
+    }
+}
+
+num main() {
+    let foo = Foo()
+    print(foo.init())
+    return 0
+}
+
+main()
