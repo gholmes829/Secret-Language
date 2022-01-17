@@ -7,7 +7,7 @@ from icecream import ic
 from pydot import Node
 
 from core.ast_nodes.node import ASTNode, NodeList
-from core.ast_nodes.types import ClassType, FnType
+from core.ast_nodes.types import ClassType, FnType, ObjectType
 
 
 class Expr(ASTNode):
@@ -137,6 +137,19 @@ class ID(Reference):
     def __repr__(self) -> str:
         return f'<ID "{self.name}" at {id(self)}>'
 
+class ScopedID(Reference):
+    def __init__(self, meta, name, object, id_tokens) -> None:
+        super().__init__(meta)
+        self.name = name
+        self.object = object
+        self.components = id_tokens
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitScopedID(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<ScopedID "{self.name}" at {id(self)}>'
+
 
 # object values
 class Object(Expr):
@@ -165,9 +178,27 @@ class FnObj(Object):  # inherit from new Obj (differentiate primative from obj m
     def __repr__(self) -> str:
         return f'<"fn_obj" at {id(self)}>'
 
+
+class MethodObj(Object):
+    def __init__(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, formals, body) -> None:
+        super().__init__(meta, FnType(meta, mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
+        self.identifier = str(id(self))
+        self.generics = generics
+        self.mutability_mod = mutability_mod
+        self.scope_mod = scope_mod
+        self.decorator = decorator
+        self.formals = formals or []
+        self.body = body
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitMethodObj(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<"method_obj" at {id(self)}>'
+
 class ClassObj(Object):
     def __init__(self, meta, decorator, generics, id_, inheritance, cls_assignments):
-        super().__init__(meta, ClassType(meta))
+        super().__init__(meta, ClassType(meta, id_))
         self.decorator = decorator
         self.generics = generics
         self.name = id_

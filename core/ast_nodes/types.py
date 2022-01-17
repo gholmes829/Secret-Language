@@ -51,8 +51,9 @@ class FnType(ObjectType):
         return f'<"fn_type" at {id(self)}>'
 
 class ClassType(ObjectType):
-    def __init__(self, meta) -> None:
+    def __init__(self, meta, cls_name) -> None:
         super().__init__(meta)
+        self.ret_type = cls_name
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitFnType(self, *args, **kwargs)

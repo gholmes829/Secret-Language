@@ -13,10 +13,6 @@ from core import ast_nodes
 # could make builtins their own special scope before globals
 
 
-class InternalClass:
-    def __init__(self, name) -> None:
-        self.name = name
-
 class ReturnInterrupt(Exception):
     def __init__(self, val) -> None:
         super().__init__()
@@ -30,8 +26,39 @@ class InternalCallable(metaclass = ABCMeta):
     def __call__(self, interpreter, *args):
         raise NotImplementedError
 
+class InternalInstance:
+    def __init__(self, klass) -> None:
+        self.klass = klass
+        self.fields = {}
 
-class InteralFunction(InternalCallable):
+    def get(self, name):
+        if name in self.fields:
+            return self.fields[name]
+        
+        return self.klass.find_method(name)
+    
+    def set(self, name, val):
+        self.fields[name] = val
+
+    def __repr__(self):
+        return f'<Internal Instance of "{self.klass.name}" at {id(self)}>'
+
+class InternalClass(InternalCallable):
+    def __init__(self, name, methods) -> None:
+        super().__init__()
+        self.name = name
+        self.methods = methods
+
+    def find_method(self, name):
+        return self.methods[name]
+
+    def __call__(self, interpreter, *args):
+        return InternalInstance(self)
+
+    def __repr__(self):
+        return f'<Internal Class, "{self.name}", at {id(self)}>'
+
+class InternalFunction(InternalCallable):
     def __init__(self, fn_obj, closure) -> None:
         super().__init__()
         self.fn_obj = fn_obj
@@ -192,13 +219,25 @@ class Interpreter(Visitor):
         return self.look_up_var(id_node)
         # return self.env.get(id_node.name)  # pre-bind version
 
+    def visitScopedID(self, id_node: ast_nodes.ScopedID):
+        instance = self.interpret(id_node.object)
+        assert isinstance(instance, InternalInstance)
+        return instance.get(id_node.name)
+
+    def visitSetStmt(self, set_node):
+        instance = self.interpret(set_node.lhs.object)
+        val = self.interpret(set_node.rhs)
+        instance.set(set_node.lhs.name, val)
+
     def visitAssign(self, assign_node):
+        self.interpret(assign_node.lhs)
         val = self.interpret(assign_node.rhs)
-        if assign_node.name in self.locals:
-            dist = self.locals[assign_node.name]
-            self.env.assignAt(dist, assign_node.name, val)
+        assign_node.lhs.type = assign_node.rhs.type  # is this necessary?
+        if assign_node.lhs in self.locals:
+            dist = self.locals[assign_node.lhs]
+            self.env.assignAt(dist, assign_node.lhs.name, val)
         else:
-            self.globals.assign(assign_node.name, val)
+            self.globals.assign(assign_node.lhs.name, val)
         # self.env.assign(assign_node.name, val)  # old way before resolver
         return val
 
@@ -224,7 +263,11 @@ class Interpreter(Visitor):
 
     def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
         self.env.define(cls_obj_node.name, None)
-        klass = InternalClass(cls_obj_node.name)
+        methods = {}
+        for method in cls_obj_node.body:
+            internal_method = InternalFunction(method, self.env)
+            methods[method.name] = internal_method
+        klass = InternalClass(cls_obj_node.name, methods)
         self.env.assign(cls_obj_node.name, klass)
     
     def visitRoot(self, root_node):
@@ -232,24 +275,12 @@ class Interpreter(Visitor):
         self.interpret(root_node.globals)
 
     def visitFnObj(self, fn_def_node):
-        new_fn = InteralFunction(fn_def_node, self.env)
+        new_fn = InternalFunction(fn_def_node, self.env)
         #self.env.define(fn_def_node.name, new_fn)
         return new_fn
 
     def visitReturn(self, return_node):
         raise ReturnInterrupt(self.interpret(return_node.expr))
-
-
-
-    # ------
-
-
-    def visitAssign(self, assign_node):
-        val = self.interpret(assign_node.rhs)
-        # assign_node.lhs.value = assign_node.rhs.value
-        assign_node.lhs.type = assign_node.rhs.type
-        self.env.assign(assign_node.lhs.name, val)
-        return val
 
 
     def visitPrimitiveType(self, obj_type_node, symbol_table):

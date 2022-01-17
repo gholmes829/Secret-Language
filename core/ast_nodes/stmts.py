@@ -75,3 +75,12 @@ class Assign(Stmt):
     
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitAssign(self, *args, **kwargs)
+
+class SetStmt(Stmt):
+    def __init__(self, meta, lhs, rhs) -> None:
+        super().__init__(meta)
+        self.lhs = lhs
+        self.rhs = rhs
+    
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitSetStmt(self, *args, **kwargs)

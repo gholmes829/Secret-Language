@@ -33,6 +33,7 @@
 // allow traditional for loops ( for (let i = 0; i < 10; i++) {} ) in addition to curr
 // access dictionaries using ".key" in addition to "['key']"
 // pass variables by reference
+// have $ or % or @ or smth replace self when referring to instance state vars
 
 
 // Tentative:
@@ -141,16 +142,16 @@ return_: "return" [expr]
 // <- Try Catch ->
 attempt: try catch+ [finally]
 try: "try" block
-catch: "catch" (scoped_id | call) ["as" scoped_id] block
+catch: "catch" (any_id | call) ["as" any_id] block
 finally: "finally" block | else
 
 // <- Exceptions ->
-throw: "throw" scoped_id
+throw: "throw" any_id
 
 
 // <- Imports ->
-import: "from" scoped_id "import" imported_object ("," imported_object)*
-imported_object: scoped_id ["as" simple_id]
+import: "from" any_id "import" imported_object ("," imported_object)*
+imported_object: any_id ["as" simple_id]
 
 
 // <- Assignment ->
@@ -162,7 +163,7 @@ assign_decl: "let" declared_identifiers "=" exprs  // multiple on both sides for
 declared_identifiers: declared_identifier ("," declared_identifier)*
 declared_identifier: [mutability_modifier] [scope_modifier] [execution_modifier] CNAME
 
-alias_assign: lvals "as" scoped_ids  // might need to double check this later on
+alias_assign: lvals "as" any_ids  // might need to double check this later on
 
 assign: lvals "=" exprs
 
@@ -171,11 +172,12 @@ assign: lvals "=" exprs
 definition: cls_def | fn_def
 
 // shared
-?decorator: "@" (scoped_id | call)
+?decorator: "@" (any_id | call)
 
 // classes
-cls_def: [decorator] [generics] "class" simple_id ["(" scoped_id ")"] "{" [cls_stmts] "}"
-cls_stmts: (fn_def | assign_decl)*
+cls_def: [decorator] [generics] "class" simple_id ["(" any_id ")"] "{" [cls_stmts] "}"
+cls_stmts: (method | assign_decl)*
+method: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
 
 // functions
 fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
@@ -227,7 +229,7 @@ parameterized_object_type: object_type [parameterization]
 
 // object types
 ?object_type: fn_type
-    | scoped_id
+    | any_id
 
 ?fn_type: [mutability_modifier] [scope_modifier] "(" "[" [types] "]" "->" type_ ")"  // change this to align w py typing module
 
@@ -288,8 +290,8 @@ ternary_op: expr "?" expr ":" expr
 
 // <- Other ->
 conditional: "(" expr SUPPOSITION expr ("else" expr SUPPOSITION expr)* "else" expr ")"
-walrus: scoped_ids ":=" exprs  // could be ambiguous sommetimes?
-deffered: expr "where" scoped_id "=" expr
+walrus: any_ids ":=" exprs  // could be ambiguous sommetimes?
+deffered: expr "where" any_id "=" expr
 
 
 // <- Call ->
@@ -301,11 +303,14 @@ call.1: term "(" [actuals] ")"  // should allow chaining
 
 // <- References
 lvals: lval ("," lval)*
-?lval: scoped_id[index+] | call index+
+?lval: any_id[index+] | call index+
 
 // identifiers
+?any_ids: any_id ("," any_id)*
+?any_id: scoped_id | simple_id
+
 scoped_ids: scoped_id ("," scoped_id)*
-scoped_id: CNAME ("." CNAME)*
+scoped_id: CNAME ("." CNAME)+
 
 simple_ids: simple_id ("," simple_id)*
 simple_id: CNAME

@@ -72,7 +72,13 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     def assign(self, meta, lvals, exprs):
         # curr assumes sizes are equal
-        return NodeList(meta, [Assign(meta, lhs, rhs) for lhs, rhs in zip(lvals, exprs)], 'assignments')
+        assignments = []
+        for lhs, rhs in zip(lvals, exprs):
+            if isinstance(lhs, ScopedID):
+                assignments.append(SetStmt(meta, lhs, rhs))
+            else:
+                assignments.append(Assign(meta, lhs, rhs))
+        return NodeList(meta, assignments, 'assignments')
 
     lvals = make_collector('lvals')
 
@@ -144,11 +150,26 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         return fn
 
     def cls_def(self, meta, decorator, generics, id_, inheritance, cls_assignments):
+        # should prob break up static vars from methods
         for a in cls_assignments:
             a.belongs_to = id_.name
         return ClassObj(meta, decorator, generics, id_.name, inheritance, cls_assignments)
 
     cls_stmts = make_collector('cls_stmts')
+
+    def method(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, identifier, formals, body):
+        method_obj = MethodObj(
+            meta,
+            decorator,
+            generics,
+            mutability_mod,
+            scope_mod,
+            ret_type,
+            formals or NodeList(meta, [], 'formals'),
+            body
+        )
+        method_obj.name = identifier.name
+        return method_obj # AssignDecl(meta, identifier, method_obj, None, None, None)
 
     # TYPING
     def type_(self, meta, type_token, execution_modifier):
@@ -168,10 +189,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     # identifiers
     def scoped_id(self, meta, *args):
-        joined = '.'.join(args)
-        id_ = ID(meta, joined)
-        id_.all_ids = args
-        return id_
+        joined = '.'.join(args[1:])
+        return ScopedID(meta, joined, ID(meta, args[0]), args)
 
     simple_id = ID
 

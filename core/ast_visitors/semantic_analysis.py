@@ -108,7 +108,7 @@ class SemanticAnalyzer(Visitor):
     def visitAssignDecl(self, ad_node):
         # I think this is equiv to varStmt from book
         self.declare(ad_node.lhs)
-        if isinstance(ad_node.rhs, (ast_nodes.FnObj, ast_nodes.ClassObj)):
+        if isinstance(ad_node.rhs, (ast_nodes.FnObj, ast_nodes.ClassObj, ast_nodes.MethodObj)):
             # have to do this since desugared fn def ...maybe not a good idea in retrospect
             # otherwise have issue with recursion and closures depending on placement of set type stmt
             try:
@@ -128,6 +128,14 @@ class SemanticAnalyzer(Visitor):
         id_node.type = self.get_type(id_node)  # hopefully not needed after type resolution
         self.resolve_local(id_node)
 
+    def visitScopedID(self, id_node):
+        self.resolve(id_node.object)
+
+    def visitSetStmt(self, set_node):
+        self.resolve(set_node.rhs)
+        self.resolve(set_node.lhs.object)
+
+
     def visitAssign(self, assign_node):
         # should add type define to scopes?
         self.resolve(assign_node.rhs)
@@ -141,6 +149,13 @@ class SemanticAnalyzer(Visitor):
         self.declare(cls_obj_node)
         self.define(cls_obj_node)
         self.set_type(cls_obj_node, cls_obj_node.type)
+
+        for method in cls_obj_node.body:
+            if isinstance(method, ast_nodes.MethodObj):
+                self.declare(method)  # might be bad
+                self.define(method)
+                self.set_type(method, method.type)
+                self.resolve_function(method)
 
     def visitNodeList(self, node_list_node):
         for node in node_list_node:
