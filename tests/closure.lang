@@ -11,11 +11,11 @@
 
 num main() {
     let counter = make_counter()
-    counter()  # prints 1
-    counter()  # prints 2
-    counter()  # prints 3
-    counter()  # prints 4
-    counter()  # prints 5
+    counter()
+    counter()
+    counter()
+    counter()
+    counter()
 }
 
 main()

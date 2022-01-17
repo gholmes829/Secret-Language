@@ -12,7 +12,7 @@ import lark
 from icecream import ic
 from pydot import Node
 
-from core.ast_manager import AST
+from core.program import Program
 from core.ast_nodes import *
 
 
@@ -26,7 +26,7 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         super().__init__()
 
     # GLOBALS
-    root = lambda _, *args: AST(Root(*args))
+    root = lambda _, *args: Program(Root(*args))
     globals = make_collector('globals')
 
     # STATEMENTS

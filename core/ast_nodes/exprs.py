@@ -5,7 +5,7 @@
 import lark
 from icecream import ic
 
-from core.ast_nodes.node import ASTNode
+from core.ast_nodes.node import ASTNode, NodeList
 from core.ast_nodes.types import FnType
 
 
@@ -45,6 +45,7 @@ class UnaryOp(Expr):
         self.op_str = operation
         self.operand = operand
         self.op, self.name = UnaryOp.ops[operation]
+        self.opd_cast, self.res_cast = None, None
     
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitUnaryOp(self, *args, **kwargs)
@@ -100,7 +101,7 @@ class Call(Expr):
     def __init__(self, meta, callee, actuals) -> None:
         super().__init__(meta)
         self.callee = callee
-        self.actuals = list(filter(lambda arg: arg, actuals))
+        self.actuals = NodeList(meta, list(filter(lambda arg: arg, actuals)), 'actuals')
         self.values = []
 
     def accept(self, visitor, *args, **kwargs):

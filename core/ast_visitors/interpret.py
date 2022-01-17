@@ -10,6 +10,8 @@ import time
 from core.ast_visitors.visitor import Visitor
 from core import ast_nodes
 
+# could make builtsins their own special scope before globals
+
 
 class ReturnInterrupt(Exception):
     def __init__(self, val) -> None:
@@ -93,6 +95,19 @@ class Environment:
                 return self.enclosing.get(name)
             raise AttributeError(f'Undefined variable "{name}".')
         
+    def getAt(self, dist, name):
+        curr_env = self
+        for _ in range(dist):
+            curr_env = curr_env.enclosing
+
+        return curr_env.scope[name]
+
+    def assignAt(self, dist, name, val):
+        curr_env = self
+        for _ in range(dist):
+            curr_env = curr_env.enclosing
+
+        curr_env.scope[name] = val
 
     def assign(self, name, val):
         if name in self.scope:
@@ -110,7 +125,9 @@ class Interpreter(Visitor):
     def __init__(self) -> None:
         super().__init__()
         self.prev_envs = []
-        self.env = None
+        self.globals = Environment('globals')
+        self.locals = {}  # book calls these locals bc they didn't analyze things in global scope, might cause bugs
+        self.env = self.globals
 
     def interpret(self, node: ast_nodes.ASTNode):
         return node.accept(self)
@@ -122,6 +139,16 @@ class Interpreter(Visitor):
 
     def exit_scope(self):
         self.env = self.prev_envs.pop()
+
+    def resolve(self, expr, depth):
+        self.locals[expr] = depth  # should type also be added here like {depth: depth, type: type}
+
+    def look_up_var(self, node):
+        if node in self.locals:
+            dist = self.locals[node]
+            return self.env.getAt(dist, node.name)
+        else:
+            return self.globals.get(node.name)
 
     def __enter__(self):
         return self
@@ -158,11 +185,17 @@ class Interpreter(Visitor):
         self.env.define(ad_node.lhs.name, val)
 
     def visitID(self, id_node):
-        return self.env.get(id_node.name)
+        return self.look_up_var(id_node)
+        # return self.env.get(id_node.name)  # pre-bind version
 
     def visitAssign(self, assign_node):
         val = self.interpret(assign_node.rhs)
-        self.env.assign(assign_node.name, val)
+        if assign_node.name in self.locals:
+            dist = self.locals[assign_node.name]
+            self.env.assignAt(dist, assign_node.name, val)
+        else:
+            self.globals.assign(assign_node.name, val)
+        # self.env.assign(assign_node.name, val)  # old way before resolver
         return val
 
     def visitNodeList(self, node_list_node):
@@ -190,13 +223,12 @@ class Interpreter(Visitor):
     def visitCall(self, call_node: ast_nodes.Call):
         callee = self.interpret(call_node.callee)
         args = [self.interpret(arg) for arg in call_node.actuals]
-        with self.enter_scope(call_node.callee.name):
-            assert isinstance(callee, InternalCallable)
-            return callee(self, *args)
+        assert isinstance(callee, InternalCallable)
+        return callee(self, *args)
     
     def visitRoot(self, root_node):
-        with self.enter_scope('globals'):
-            self.interpret(root_node.globals)
+        # with self.enter_scope('globals'):  # before initializing globals in __init__
+        self.interpret(root_node.globals)
 
     def visitFnObj(self, fn_def_node):
         new_fn = InteralFunction(fn_def_node, self.env)

@@ -8,32 +8,31 @@
 # max num params be 254 (class) 255 (function)
 # for fn calls, each fn call gets own env to protect recursions
 
+# consider type literals, function str should also refer to str type literal for example
+
 
 from core.ast_visitors import SemanticAnalyzer as SA, Unparser, GraphManager, Interpreter
 from core import ReturnInterrupt
 
 
-class AST:
-    def __init__(self, root) -> None:
-        self.root = root
-        self.bind_and_resolve()
-
-    def bind_and_resolve(self):
-        SA().resolve(self.root)
+class Program:
+    def __init__(self, ast) -> None:
+        self.ast = ast
+        self.interpreter = Interpreter()
+        SA(self.interpreter).resolve(self.ast)
 
     def unparsed(self):
-        return self.root.accept(Unparser(), 0)
+        return self.ast.accept(Unparser(), 0)
 
     def to_dot(self):
         graph_manager = GraphManager()
-        self.root.accept(graph_manager, graph_manager.graph)
+        self.ast.accept(graph_manager, graph_manager.graph)
         return graph_manager.graph.to_string()
 
     def interpret(self):
-        interpreter = Interpreter()
         exit_code = None
         try:
-            interpreter.interpret(self.root)
+            self.interpreter.interpret(self.ast)
         except ReturnInterrupt as RI:
             exit_code = int(RI.ret_val)
         else:
