@@ -80,7 +80,7 @@ class SemanticAnalyzer(Visitor):
                 return scope[name]['type']
         raise ValueError(f'Could not retrieve type for "{name}"')
 
-    def set_type_inst(self, name, type_):
+    def set_type_inst(self, name, type_):  # when this.field is used as opposed to obj.field
         for scope in reversed(self.scopes):
             if 'this' in scope:
                 scope[name] = {'init': True, 'type': type_}

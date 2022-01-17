@@ -8,6 +8,9 @@ When used as a lark transformer, this class defines how the AST nodes are built.
 # make sure that fns wo ret stmt still return None or smth
 # for print, desugar by implicitly casting args to str first
 
+# TODO change fn signature so init returns class name i.e. Foo init() {}
+# add meta classes
+
 import lark
 from icecream import ic
 from pydot import Node

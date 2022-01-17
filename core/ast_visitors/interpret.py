@@ -54,21 +54,27 @@ class InternalClass(InternalCallable):
         return self.methods[name]
 
     def __call__(self, interpreter, *args):
-        return InternalInstance(self)
+        instance = InternalInstance(self)
+        try:
+            initializer = self.find_method('init')
+            initializer.bind(instance)(interpreter, *args)
+        except KeyError: pass
+        return instance
 
     def __repr__(self):
         return f'<Internal Class, "{self.name}", at {id(self)}>'
 
 class InternalFunction(InternalCallable):
-    def __init__(self, fn_obj, closure) -> None:
+    def __init__(self, fn_obj, closure, is_initializer) -> None:
         super().__init__()
         self.fn_obj = fn_obj
         self.closure = closure
+        self.is_initializer = is_initializer
 
     def bind(self, instance):
         env = Environment('binding', self.closure)
         env.define('this', instance)
-        return InternalFunction(self.fn_obj, env)
+        return InternalFunction(self.fn_obj, env, self.is_initializer)
 
     def __call__(self, interpreter: 'Interpreter', *args):
         assert len(args) == len(self.fn_obj.formals)
@@ -81,6 +87,8 @@ class InternalFunction(InternalCallable):
             except ReturnInterrupt as RI:
                     return RI.val
             else:
+                if self.is_initializer:
+                    return self.closure.getAt(0, 'this')
                 return None
 
 
@@ -284,7 +292,7 @@ class Interpreter(Visitor):
         self.env.define(cls_obj_node.name, None)
         methods = {}
         for method in cls_obj_node.body:
-            internal_method = InternalFunction(method, self.env)
+            internal_method = InternalFunction(method, self.env, method.name == 'init')
             methods[method.name] = internal_method
         klass = InternalClass(cls_obj_node.name, methods)
         self.env.assign(cls_obj_node.name, klass)
@@ -294,7 +302,7 @@ class Interpreter(Visitor):
         self.interpret(root_node.globals)
 
     def visitFnObj(self, fn_def_node):
-        new_fn = InternalFunction(fn_def_node, self.env)
+        new_fn = InternalFunction(fn_def_node, self.env, False)
         #self.env.define(fn_def_node.name, new_fn)
         return new_fn
 
