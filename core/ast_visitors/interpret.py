@@ -45,20 +45,23 @@ class InternalInstance:
         return f'<Internal Instance of "{self.klass.name}" at {id(self)}>'
 
 class InternalClass(InternalCallable):
-    def __init__(self, name, methods) -> None:
+    def __init__(self, name, superclass, methods) -> None:
         super().__init__()
         self.name = name
+        self.superclass = superclass
         self.methods = methods
 
     def find_method(self, name):
-        return self.methods[name]
+        if name in self.methods:
+            return self.methods[name]
+        elif self.superclass:
+            return self.superclass.find_method(name)
 
     def __call__(self, interpreter, *args):
         instance = InternalInstance(self)
-        try:
-            initializer = self.find_method('init')
+        initializer = self.find_method('init')
+        if initializer:
             initializer.bind(instance)(interpreter, *args)
-        except KeyError: pass
         return instance
 
     def __repr__(self):
@@ -289,12 +292,17 @@ class Interpreter(Visitor):
         return name(self, *args)
 
     def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
+        superclass = None
+        if cls_obj_node.inheritance:
+            superclass = self.interpret(cls_obj_node.inheritance)
+            assert isinstance(superclass, InternalClass)
+
         self.env.define(cls_obj_node.name, None)
         methods = {}
         for method in cls_obj_node.body:
             internal_method = InternalFunction(method, self.env, method.name == 'init')
             methods[method.name] = internal_method
-        klass = InternalClass(cls_obj_node.name, methods)
+        klass = InternalClass(cls_obj_node.name, superclass, methods)
         self.env.assign(cls_obj_node.name, klass)
     
     def visitRoot(self, root_node):

@@ -10,6 +10,8 @@ When used as a lark transformer, this class defines how the AST nodes are built.
 
 # TODO change fn signature so init returns class name i.e. Foo init() {}
 # add meta classes
+# check for cycles in inheritance chain (error)
+# allow passing instance of subclass to fun expecting baseclass and whatnot
 
 import lark
 from icecream import ic

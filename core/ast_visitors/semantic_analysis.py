@@ -175,9 +175,11 @@ class SemanticAnalyzer(Visitor):
 
         for method in cls_obj_node.body:
             if isinstance(method, ast_nodes.MethodObj):
-                self.declare(method)  # might be bad
-                self.define(method)
-                self.set_type(method.name, method.type)
+                try:
+                    self.declare(method)  # might be bad
+                    self.define(method)
+                    self.set_type(method.name, method.type)
+                except AssertionError: pass
 
         with self.scopes.enter_new(cls_obj_node.name):
 
