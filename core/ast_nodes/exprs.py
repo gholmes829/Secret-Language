@@ -7,7 +7,7 @@ from icecream import ic
 from pydot import Node
 
 from core.ast_nodes.node import ASTNode, NodeList
-from core.ast_nodes.types import FnType
+from core.ast_nodes.types import ClassType, FnType
 
 
 class Expr(ASTNode):
@@ -165,7 +165,17 @@ class FnObj(Object):  # inherit from new Obj (differentiate primative from obj m
     def __repr__(self) -> str:
         return f'<"fn_obj" at {id(self)}>'
 
+class ClassObj(Object):
+    def __init__(self, meta, decorator, generics, id_, inheritance, cls_assignments):
+        super().__init__(meta, ClassType(meta))
+        self.decorator = decorator
+        self.generics = generics
+        self.name = id_
+        self.inheritance = inheritance
+        self.body = cls_assignments
 
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitClassObj(self, *args, **kwargs)
 
 
 # literals

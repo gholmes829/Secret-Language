@@ -174,7 +174,8 @@ definition: cls_def | fn_def
 ?decorator: "@" (scoped_id | call)
 
 // classes
-cls_def: [decorator] [generics] "class" simple_id ["(" scoped_id ")"] "{" (fn_def | assign_decl)* "}"
+cls_def: [decorator] [generics] "class" simple_id ["(" scoped_id ")"] "{" [cls_stmts] "}"
+cls_stmts: (fn_def | assign_decl)*
 
 // functions
 fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block

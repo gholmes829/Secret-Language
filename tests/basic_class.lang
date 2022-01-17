@@ -1,9 +1,15 @@
 # very basic class
 
 class Circle {
+    let pi = 3.14
+
     void init(num radius) {
         this.radius = radius
     }
+
+    num get_radius() {
+        return this.radius
+    }
 }
 
-let small_circle = Circle(2)
+print(Circle)

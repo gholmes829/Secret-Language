@@ -143,8 +143,12 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         
         return fn
 
-    def cls_def(self, meta, *args):
-        raise NotImplementedError
+    def cls_def(self, meta, decorator, generics, id_, inheritance, cls_assignments):
+        for a in cls_assignments:
+            a.belongs_to = id_.name
+        return ClassObj(meta, decorator, generics, id_.name, inheritance, cls_assignments)
+
+    cls_stmts = make_collector('cls_stmts')
 
     # TYPING
     def type_(self, meta, type_token, execution_modifier):

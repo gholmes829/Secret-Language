@@ -49,3 +49,10 @@ class FnType(ObjectType):
 
     def __repr__(self) -> str:
         return f'<"fn_type" at {id(self)}>'
+
+class ClassType(ObjectType):
+    def __init__(self, meta) -> None:
+        super().__init__(meta)
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitFnType(self, *args, **kwargs)

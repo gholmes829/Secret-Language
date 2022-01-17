@@ -108,7 +108,7 @@ class SemanticAnalyzer(Visitor):
     def visitAssignDecl(self, ad_node):
         # I think this is equiv to varStmt from book
         self.declare(ad_node.lhs)
-        if isinstance(ad_node.rhs, ast_nodes.FnObj):
+        if isinstance(ad_node.rhs, (ast_nodes.FnObj, ast_nodes.ClassObj)):
             # have to do this since desugared fn def ...maybe not a good idea in retrospect
             # otherwise have issue with recursion and closures depending on placement of set type stmt
             try:
@@ -124,6 +124,7 @@ class SemanticAnalyzer(Visitor):
         # I think this is varExpr from book
         if id_node.name in self.scopes.top and not self.scopes.top[id_node.name]['init']:
             raise ValueError('Variable can not reference itself in initializer.')
+
         id_node.type = self.get_type(id_node)  # hopefully not needed after type resolution
         self.resolve_local(id_node)
 
@@ -135,6 +136,11 @@ class SemanticAnalyzer(Visitor):
 
     def visitFnObj(self, fn_obj_node):
         self.resolve_function(fn_obj_node)
+
+    def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
+        self.declare(cls_obj_node)
+        self.define(cls_obj_node)
+        self.set_type(cls_obj_node, cls_obj_node.type)
 
     def visitNodeList(self, node_list_node):
         for node in node_list_node:

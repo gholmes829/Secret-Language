@@ -13,6 +13,10 @@ from core import ast_nodes
 # could make builtins their own special scope before globals
 
 
+class InternalClass:
+    def __init__(self, name) -> None:
+        self.name = name
+
 class ReturnInterrupt(Exception):
     def __init__(self, val) -> None:
         super().__init__()
@@ -214,14 +218,14 @@ class Interpreter(Visitor):
 
     def visitCall(self, call_node: ast_nodes.Call):
         name = self.interpret(call_node.name)
-
-        #for a in call_node.actuals:
-        #    for a_ in a:
-        #        ic(a_)
-        #input()
         args = [self.interpret(arg) for arg in call_node.actuals]
         assert isinstance(name, InternalCallable)
         return name(self, *args)
+
+    def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
+        self.env.define(cls_obj_node.name, None)
+        klass = InternalClass(cls_obj_node.name)
+        self.env.assign(cls_obj_node.name, klass)
     
     def visitRoot(self, root_node):
         # with self.enter_scope('globals'):  # before initializing globals in __init__
