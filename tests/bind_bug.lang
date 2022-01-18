@@ -13,6 +13,3 @@ num main() {
     
     return 0
 }
-
-main()
-let test = 3

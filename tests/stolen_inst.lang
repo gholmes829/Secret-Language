@@ -11,5 +11,3 @@ num main() {
     print(foo.init())
     return 0
 }
-
-main()

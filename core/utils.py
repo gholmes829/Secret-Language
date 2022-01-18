@@ -4,6 +4,7 @@
 
 import subprocess
 
+
 def read_file(f_path: str) -> str:
     with open(f_path, 'r') as f:
         return f.read()

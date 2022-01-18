@@ -14,6 +14,5 @@ num main() {
     for j in 10 {
         counter()
     }
+    return 0
 }
-
-main()

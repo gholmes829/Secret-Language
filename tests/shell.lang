@@ -1,0 +1,7 @@
+# shell
+
+num main() {
+    let cmd = 'pwd'
+    print(shell(cmd))
+    return 0
+}

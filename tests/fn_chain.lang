@@ -13,4 +13,7 @@ void f() {
     g()
 }
 
-f()
+num main() {
+    f()
+    return 0
+}

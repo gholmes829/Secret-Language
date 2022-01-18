@@ -41,16 +41,16 @@ def cache_ast(ast, src):
     with open(out_pickle_file, 'wb') as f:
         dill.dump(ast, f)
 
-def sub_pass(raw_prog):
+def sub_pass(raw_src):
     # probably isn't super necessary
-    prog = ''
-    for line in raw_prog.split('\n'):
+    src = ''
+    for line in raw_src.split('\n'):
         try:
             filtered = line[:line.index('#')]
         except:
             filtered = line
-        prog += filtered.replace(';', '\n')
-    return prog
+        src += filtered.replace(';', '\n')
+    return src
 
 def main():
     args = get_cmd_line_args()
@@ -60,8 +60,8 @@ def main():
         with open(args.src_f, 'rb') as f:
             sys.exit(dill.load(f).interpret())
 
-    raw_prog = utils.read_file(args.src_f)
-    prog = sub_pass(raw_prog)
+    raw_src = utils.read_file(args.src_f)
+    src = sub_pass(raw_src)
 
     if PARSER_TYPE == 'earley':
         parser = lark.Lark.open(
@@ -72,12 +72,12 @@ def main():
             maybe_placeholders = True,
         )
         transformer = ASTBuilder()
-        parse_tree = parser.parse(prog)
+        parse_tree = parser.parse(src)
         png_path = args.src_f.replace('.lang', '.png')
         if not osp.isfile(png_path) or osp.getmtime(args.src_f) > osp.getmtime(png_path):
             lark.tree.pydot__tree_to_png(parse_tree, png_path, rankdir='TB')
 
-        ast = transformer.transform(parse_tree)
+        prog = transformer.transform(parse_tree)
 
     else:
         parser = lark.Lark.open(
@@ -91,13 +91,13 @@ def main():
             maybe_placeholders = True,
         )
 
-        ast = parser.parse(prog)
+        prog = parser.parse(src)
 
-    if args.unparse: unparse_ast(ast)
-    if args.gen_ast: graph_ast(ast, args.src_f)
-    if args.cache: cache_ast(ast, args.src_f)
+    if args.unparse: unparse_ast(prog)
+    if args.gen_ast: graph_ast(prog, args.src_f)
+    if args.cache: cache_ast(prog, args.src_f)
 
-    sys.exit(ast.interpret())
+    sys.exit(prog.interpret())
 
 
 if __name__ == '__main__':

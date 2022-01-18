@@ -4,7 +4,7 @@
 
 from icecream import ic
 
-from core.ast_nodes.node import ASTNode
+from core.nodes.node import ASTNode
 
 class ObjectType(ASTNode):
     def __init__(self, *args, **kwargs) -> None:

@@ -2,16 +2,16 @@
 
 """
 
-from core.ast_nodes.stmts import AssignDecl, If
-from core.ast_visitors.visitor import Visitor
-from core import ast_nodes
+from core.nodes.stmts import AssignDecl, If
+from core.visitors.visitor import Visitor
+from core import nodes
 # TODO: change "node.accept(self..." to "self.unparse(node..."
 
 class Unparser(Visitor):
     def __init__(self) -> None:
         super().__init__()
 
-    def unparse(self, node: ast_nodes.ASTNode, depth: int):
+    def unparse(self, node: nodes.ASTNode, depth: int):
         return node.accept(self, depth)
 
     def visitRoot(self, print_root, depth):
@@ -62,7 +62,7 @@ class Unparser(Visitor):
     def visitFnObj(self, fn_def_node, depth):
         base_depth_str = depth * '\t'
         ret_type_unparsed = base_depth_str + fn_def_node.type.ret_type.accept(self, depth)
-        formals_unparsed = ', '.join(ast_nodes.PrimitiveType.inv_data_types[formal.type] + ' ' + formal.accept(self, depth) for formal in fn_def_node.formals)
+        formals_unparsed = ', '.join(nodes.PrimitiveType.inv_data_types[formal.type] + ' ' + formal.accept(self, depth) for formal in fn_def_node.formals)
         body_unparsed = '\n'.join(stmt.accept(self, depth + 1) for stmt in fn_def_node.body)
 
         return f'({formals_unparsed}) -> {ret_type_unparsed} {{\n{body_unparsed}\n{base_depth_str}}}'

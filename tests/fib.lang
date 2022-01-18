@@ -11,5 +11,3 @@ num main() {
     for i : 16 { print(i + " - " + fib(i)) }
     return 0
 }
-
-main()

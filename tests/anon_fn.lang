@@ -4,7 +4,11 @@ void call(([num] -> num) cb, num arg) {
     print(cb(arg))
 }
 
-call((num arg) -> num {
-    print('doubling!')
-    return arg * 2  # double trouble
-}, 5)
+num main() {
+    call((num arg) -> num {
+        print('doubling!')
+        return arg * 2  # double trouble
+    }, 5)
+
+    return 0
+}

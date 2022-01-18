@@ -4,8 +4,8 @@
 
 import pydot
 
-from core.ast_visitors.visitor import Visitor
-from core import ast_nodes
+from core.visitors.visitor import Visitor
+from core import nodes
 
 # for loop and maybe others need work
 
@@ -39,7 +39,7 @@ class GraphManager(Visitor):
 
     def visitID(self, id_node, graph):
         try:
-            id_type = ast_nodes.PrimitiveType.inv_data_types[id_node.type]
+            id_type = nodes.PrimitiveType.inv_data_types[id_node.type]
         except KeyError:
             id_type = id_node.type
 
@@ -157,7 +157,7 @@ class GraphManager(Visitor):
         return kw_node
 
     def visitPrimitiveType(self, obj_type_node, graph):
-        num = obj_type_node.make_pydot_node(fillcolor='burlywood', shape='hexagon', label = f'PrimitiveType: "{ast_nodes.PrimitiveType.inv_data_types[obj_type_node.type]}"')
+        num = obj_type_node.make_pydot_node(fillcolor='burlywood', shape='hexagon', label = f'PrimitiveType: "{nodes.PrimitiveType.inv_data_types[obj_type_node.type]}"')
         graph.add_node(num)
         return num
 
@@ -206,18 +206,18 @@ class GraphManager(Visitor):
         return data
 
     def visitLiteral(self, literal_node, graph):
-        data = literal_node.make_pydot_node(label = f'{ast_nodes.PrimitiveType.inv_data_types[literal_node.type]}_lit: "{literal_node.value}"')
+        data = literal_node.make_pydot_node(label = f'{nodes.PrimitiveType.inv_data_types[literal_node.type]}_lit: "{literal_node.value}"')
         graph.add_node(data)
         return data
 
     def visitNumLit(self, num_lit_node, graph):
-        return super(ast_nodes.NumLit, num_lit_node).accept(self, graph)
+        return super(nodes.NumLit, num_lit_node).accept(self, graph)
 
     def visitStrLit(self, str_lit_node, graph):
-        return super(ast_nodes.StrLit, str_lit_node).accept(self, graph)
+        return super(nodes.StrLit, str_lit_node).accept(self, graph)
 
     def visitBoolLit(self, bool_lit_node, graph):
-        return super(ast_nodes.BoolLit, bool_lit_node).accept(self, graph)
+        return super(nodes.BoolLit, bool_lit_node).accept(self, graph)
 
     def visitNone(self, none_node, graph):
-        return super(ast_nodes.None_, none_node).accept(self, graph)
+        return super(nodes.None_, none_node).accept(self, graph)

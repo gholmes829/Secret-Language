@@ -1,0 +1,11 @@
+# trying built in range
+
+num main() {
+    let data = range(10)
+    print(range(10))
+    for i in 10 {
+        print(data[i])
+    }
+
+    return 0
+}

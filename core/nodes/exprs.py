@@ -6,8 +6,8 @@ import lark
 from icecream import ic
 from pydot import Node
 
-from core.ast_nodes.node import ASTNode, NodeList
-from core.ast_nodes.types import ClassType, FnType, ObjectType
+from core.nodes.node import ASTNode, NodeList
+from core.nodes.types import ClassType, FnType, ObjectType
 
 
 class Expr(ASTNode):
@@ -93,7 +93,7 @@ class BinOp(Expr):
 
     def __init__(self, meta, lhs, op_str, rhs) -> None:
         super().__init__(meta)
-        self.op_str = op_str
+        self.op_str = str(op_str)
         self.lhs, self.rhs = lhs, rhs
         self.op, self.op_name = BinOp.ops[op_str]
         self.lhs_cast, self.rhs_cast, self.res_cast = None, None, None

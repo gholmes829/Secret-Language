@@ -3,11 +3,9 @@
 """
 
 from icecream import ic
-from core import ast_nodes
-from core.ast_nodes.exprs import ThisID
-#ic.disable()
-
-from core.ast_visitors.visitor import Visitor
+from core import nodes
+from core.runtime import Environment
+from core.visitors.visitor import Visitor
 
 
 
@@ -48,7 +46,14 @@ class ScopeStack:
     def __len__(self):
         return len(self.scopes)
 
+# Inner and Outer are noops
+class Inner:
+    def __init__(self, val) -> None:
+        self.type = val
 
+class Outer:
+    def __init__(self, val) -> None:
+        self.ret_type = Inner(val)
 
 class SemanticAnalyzer(Visitor):
     def __init__(self, interpreter) -> None:
@@ -56,26 +61,20 @@ class SemanticAnalyzer(Visitor):
         self.scopes = ScopeStack()
         self.interpreter = interpreter
 
-    def resolve(self, node: ast_nodes.ASTNode):
+    def resolve(self, node: nodes.ASTNode):
         node.accept(self)
 
-    def declare(self, node: ast_nodes.ASTNode):
+    def declare(self, node: nodes.ASTNode):
         assert node.name not in self.scopes.top, node.name
         self.scopes.top[node.name] = {'init': False, 'type': node.type}
 
-    def define(self, node: ast_nodes.ASTNode):
+    def define(self, node: nodes.ASTNode):
         self.scopes.top[node.name]['init'] = True
 
     def get_type(self, name):
-        class Dummy1:
-            def __init__(self, val) -> None:
-                self.type = val
-        class Dummy2:
-            def __init__(self, val) -> None:
-                self.ret_type = Dummy1(val)
-        if name == 'clock': return Dummy2(float)
-        elif name == 'print': return Dummy2('void')  # hard coded for now, need to find way to add builtins to semantic analysis
-        elif name == 'input': return Dummy2('str')
+        for builtin in Environment.builtins:
+            if builtin.name == name:
+                return Outer(builtin.ret_type)
 
         for scope in reversed(self.scopes):
             if name in scope:
@@ -96,7 +95,7 @@ class SemanticAnalyzer(Visitor):
                 return
         raise ValueError(f'Could not set type for "{name}"')
 
-    def resolve_local(self, node: ast_nodes.ASTNode, node_name):
+    def resolve_local(self, node: nodes.ASTNode, node_name):
         assert hasattr(node, 'name')
         for i, (scope, name) in enumerate(list(zip(self.scopes.scopes, self.scopes.names))[::-1][:-1]):
             assert name != 'globals'  # hopefully no one names their function globals until this gets fixed
@@ -106,7 +105,7 @@ class SemanticAnalyzer(Visitor):
         else:
             pass
 
-    def resolve_function(self, node: ast_nodes.ASTNode):
+    def resolve_function(self, node: nodes.ASTNode):
         with self.scopes.enter_new(node.name):
             for formal in node.formals:
                 self.declare(formal)
@@ -120,7 +119,7 @@ class SemanticAnalyzer(Visitor):
     def visitAssignDecl(self, ad_node):
         # I think this is equiv to varStmt from book
         self.declare(ad_node.lhs)
-        if isinstance(ad_node.rhs, (ast_nodes.FnObj, ast_nodes.ClassObj, ast_nodes.MethodObj)):
+        if isinstance(ad_node.rhs, (nodes.FnObj, nodes.ClassObj, nodes.MethodObj)):
             # have to do this since desugared fn def ...maybe not a good idea in retrospect
             # otherwise have issue with recursion and closures depending on placement of set type stmt
             try:
@@ -158,7 +157,7 @@ class SemanticAnalyzer(Visitor):
     def visitSetStmt(self, set_node):
         self.resolve(set_node.rhs)
         self.resolve(set_node.lhs.object)
-        if isinstance(set_node.lhs.object, ThisID):
+        if isinstance(set_node.lhs.object, nodes.ThisID):
             self.set_type_inst(set_node.lhs.object.name, set_node.rhs.type)
         else:
             self.set_type(set_node.lhs.object.name, set_node.rhs.type)
@@ -175,7 +174,7 @@ class SemanticAnalyzer(Visitor):
     def visitFnObj(self, fn_obj_node):
         self.resolve_function(fn_obj_node)
 
-    def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
+    def visitClassObj(self, cls_obj_node: nodes.ClassObj):
         self.declare(cls_obj_node)
         self.define(cls_obj_node)
         if cls_obj_node.inheritance:
@@ -188,7 +187,7 @@ class SemanticAnalyzer(Visitor):
         self.set_type(cls_obj_node.name, cls_obj_node.type)
 
         for method in cls_obj_node.body:
-            if isinstance(method, ast_nodes.MethodObj):
+            if isinstance(method, nodes.MethodObj):
                 try:
                     self.declare(method)  # might be bad
                     self.define(method)
@@ -200,7 +199,7 @@ class SemanticAnalyzer(Visitor):
             self.scopes.top['this'] = {'init': True, 'type': cls_obj_node.type}
 
             for method in cls_obj_node.body:
-                if isinstance(method, ast_nodes.MethodObj):
+                if isinstance(method, nodes.MethodObj):
                     # self.declare(method)  # might be bad
                     # self.define(method)
                     # self.set_type(method, method.type)

@@ -78,15 +78,12 @@
 
 // GLOBAL
 // ======
-root: globals
-
-globals: global*
+root: global*
 
 ?global: import
     | assign_decl
     | fn_def
     | cls_def
-    | call  // temporary, DELETE
 
 COMMENT: "#" /[^\n]/*
 %ignore COMMENT

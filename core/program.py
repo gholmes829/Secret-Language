@@ -12,8 +12,9 @@
 # multiple inheritance and method resolution
 
 
-from core.ast_visitors import SemanticAnalyzer as SA, Unparser, GraphManager, Interpreter
-from core import ReturnInterrupt
+from core.visitors.semantics import SemanticAnalyzer as SA
+from core.visitors import Unparser, GraphManager, Interpreter
+from core.runtime import ReturnInterrupt
 
 
 class Program:
@@ -32,15 +33,8 @@ class Program:
         return graph_manager.graph.to_string()
 
     def interpret(self):
-        # input('interpret?')
-        exit_code = None
         try:
-            self.interpreter.interpret(self.ast)
-        except ReturnInterrupt as RI:
-            exit_code = int(RI.ret_val)
-        else:
-            pass
-            # raise ValueError('Did not recieve any exit code...')
-        
-        return exit_code
+            return self.interpreter(self.ast)
+        except RuntimeError as err:
+            return err.args[0]
     

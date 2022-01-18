@@ -15,10 +15,9 @@ When used as a lark transformer, this class defines how the AST nodes are built.
 
 import lark
 from icecream import ic
-from pydot import Node
 
 from core.program import Program
-from core.ast_nodes import *
+from core.nodes import *
 
 
 def make_collector(*args, type_ = NodeList):
@@ -31,7 +30,17 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         super().__init__()
 
     # GLOBALS
-    root = lambda _, *args: Program(Root(*args))
+    def root(self, meta, *globs):
+        main_id = None
+        for glob in globs:
+            if isinstance(glob, AssignDecl) and glob.lhs.name == 'main':
+                main_id = glob.lhs
+                break
+        else:
+            raise ValueError('Can not find main!')
+        globs += (Call(meta, main_id, ()),)
+        return Program(Root(meta, NodeList(meta, globs, 'globals')))
+
     globals = make_collector('globals')
 
     # STATEMENTS
