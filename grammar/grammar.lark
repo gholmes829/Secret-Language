@@ -321,7 +321,7 @@ simple_ids: simple_id ("," simple_id)*
 simple_id: CNAME
 
 // indexes and other access
-index: "[" expr ("," expr)* "]"
+?index: "[" expr ("," expr)* "]"
 
 
 // <- Literal Values ->
@@ -337,15 +337,15 @@ anon_fn: "(" formals ")" "->" type_ block  // this is an expr that contains stmt
 
 // containers
 containers: sets | lists | tuples | dicts  // should there be list of x comprehensions here?
-container: set | list | tuple | dict | set_comp | list_comp | dict_comp
+?container: set | list_ | tuple | dict | set_comp | list_comp | dict_comp
 
 sets: set ("," set)*
 set_comp: "{" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] "}"
 set: "{" [exprs] "}"
 
-lists: list ("," list)*
+lists: list_ ("," list_)*
 list_comp: "[" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] "]"
-list: "[" [exprs] "]"
+list_: "[" [exprs] "]"
 
 tuples: tuple ("," tuple)*
 // add generator comprehension as well!

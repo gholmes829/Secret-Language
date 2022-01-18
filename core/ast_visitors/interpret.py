@@ -6,6 +6,7 @@ from abc import ABCMeta, abstractmethod
 from icecream import ic
 from core.ast_nodes.node import ASTNode
 import time
+#ic.disable()
 
 from core.ast_visitors.visitor import Visitor
 from core import ast_nodes
@@ -17,6 +18,21 @@ class ReturnInterrupt(Exception):
     def __init__(self, val) -> None:
         super().__init__()
         self.val = val
+
+class InternalArray:
+    def __init__(self, values, type_) -> None:
+        self.values = values
+        self.type = type_
+
+    def __getitem__(self, idx):
+        return self.values[idx]
+
+    def __setitem__(self, idx, val):
+        self.values[idx] = val
+
+    def __len__(self):
+        return len(self.values)
+
 
 class InternalCallable(metaclass = ABCMeta):
     def __init__(self) -> None:
@@ -266,10 +282,18 @@ class Interpreter(Visitor):
         return method.bind(object_)
 
     def visitAssign(self, assign_node):
-        self.interpret(assign_node.lhs)
+        lhs_val = self.interpret(assign_node.lhs)
         val = self.interpret(assign_node.rhs)
         assign_node.lhs.type = assign_node.rhs.type  # is this necessary?
         if assign_node.lhs in self.locals:
+
+
+            if isinstance(assign_node.lhs, ast_nodes.Index):
+                array, idx = lhs_val
+                array[idx] = val
+                return val
+
+
             dist = self.locals[assign_node.lhs]
             self.env.assignAt(dist, assign_node.lhs.name, val)
         else:
@@ -292,10 +316,10 @@ class Interpreter(Visitor):
             self.interpret(while_node.body)
 
     def visitCall(self, call_node: ast_nodes.Call):
-        name = self.interpret(call_node.name)
+        fn = self.interpret(call_node.name)
         args = [self.interpret(arg) for arg in call_node.actuals]
-        assert isinstance(name, InternalCallable)
-        return name(self, *args)
+        assert isinstance(fn, InternalCallable)
+        return fn(self, *args)
 
     def visitClassObj(self, cls_obj_node: ast_nodes.ClassObj):
         superclass = None
@@ -321,20 +345,33 @@ class Interpreter(Visitor):
         self.env.assign(cls_obj_node.name, klass)
     
     def visitRoot(self, root_node):
-        # with self.enter_scope('globals'):  # before initializing globals in __init__
         self.interpret(root_node.globals)
 
     def visitFnObj(self, fn_def_node):
-        new_fn = InternalFunction(fn_def_node, self.env, False)
-        #self.env.define(fn_def_node.name, new_fn)
-        return new_fn
+        return InternalFunction(fn_def_node, self.env, False)
 
     def visitReturn(self, return_node):
         raise ReturnInterrupt(self.interpret(return_node.expr))
 
 
-    def visitPrimitiveType(self, obj_type_node, symbol_table):
+    def visitPrimitiveType(self, obj_type_node):
         raise NotImplementedError
 
-    def visitFnType(self, fn_sig_node, *args, **kwargs):
-        pass
+    def visitFnType(self, fn_sig_node):
+        raise NotImplementedError
+
+    def visitIndex(self, index_node):
+        idx = int(self.interpret(index_node.idx))
+
+        if index_node in self.locals:
+            dist = self.locals[index_node]
+            array = self.env.getAt(dist, index_node.name)
+            return array, idx
+        else:
+            array = self.interpret(index_node.base)
+
+        
+        return array[idx]
+
+    def visitArray(self, array_node):
+        return InternalArray(array_node.values, array_node.type)

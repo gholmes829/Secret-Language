@@ -277,3 +277,27 @@ class None_(Literal):
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNone(self, *args, **kwargs)
+
+class Container(Expr):
+    def __init__(self, meta) -> None:
+        super().__init__(meta)
+
+class Array(Container):
+    def __init__(self, meta, values) -> None:
+        super().__init__(meta)
+        self.values = [val.value for val in values]
+        self.type = type(self.values[0]) if self.values else None  # this will need to be changed later
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitArray(self, *args, **kwargs)
+
+class Index(Reference):
+    def __init__(self, meta, base, idx) -> None:
+        super().__init__(meta)
+        self.base = base
+        self.name = base.name
+        self.idx = idx
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitIndex(self, *args, **kwargs)
+        

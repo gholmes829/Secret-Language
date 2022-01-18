@@ -5,6 +5,7 @@
 from icecream import ic
 from core import ast_nodes
 from core.ast_nodes.exprs import ThisID
+#ic.disable()
 
 from core.ast_visitors.visitor import Visitor
 
@@ -131,7 +132,6 @@ class SemanticAnalyzer(Visitor):
         self.define(ad_node.lhs)
 
     def visitID(self, id_node):
-        # ic(id_node)
         # I think this is varExpr from book
         if id_node.name in self.scopes.top and not self.scopes.top[id_node.name]['init']:
             raise ValueError('Variable can not reference itself in initializer.')
@@ -157,7 +157,6 @@ class SemanticAnalyzer(Visitor):
     def visitSetStmt(self, set_node):
         self.resolve(set_node.rhs)
         self.resolve(set_node.lhs.object)
-        #ic(type(set_node.lhs.object))
         if isinstance(set_node.lhs.object, ThisID):
             self.set_type_inst(set_node.lhs.object.name, set_node.rhs.type)
         else:
@@ -170,6 +169,7 @@ class SemanticAnalyzer(Visitor):
         self.resolve(assign_node.rhs)
         self.set_type(assign_node.lhs.name, assign_node.rhs.type)
         self.resolve_local(assign_node.lhs, assign_node.lhs.name)
+        # self.resolve(assign_node.lhs)
 
     def visitFnObj(self, fn_obj_node):
         self.resolve_function(fn_obj_node)
@@ -227,8 +227,6 @@ class SemanticAnalyzer(Visitor):
         self.resolve(while_node.body)
 
     def visitBinOp(self, bin_op_node):
-        #ic(bin_op_node.lhs)
-        #ic(bin_op_node.lhs.type)
         self.resolve(bin_op_node.lhs)
         self.resolve(bin_op_node.rhs)
         bin_op_node.lhs_cast, bin_op_node.rhs_cast, bin_op_node.res_cast = \
@@ -244,8 +242,7 @@ class SemanticAnalyzer(Visitor):
     def visitCall(self, call_node):
         self.resolve(call_node.name)
         self.resolve(call_node.actuals)
-        type_ = self.get_type(call_node.name.name).ret_type.type
-        call_node.type = type_
+        call_node.type = self.get_type(call_node.name.name).ret_type.type
 
     def visitLiteral(self, literal_node):
         raise NotImplementedError
@@ -267,3 +264,13 @@ class SemanticAnalyzer(Visitor):
 
     def visitFnType(self, fn_sig_node):
         raise NotImplementedError
+
+    def visitArray(self, array_node):
+        pass
+
+    def visitIndex(self, index_node):
+        self.resolve(index_node.idx)
+        self.resolve(index_node.base)
+        index_node.type = self.get_type(index_node.name)
+        self.resolve_local(index_node.base, index_node.name)
+    

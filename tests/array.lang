@@ -1,0 +1,12 @@
+# basic array
+
+num main() {
+    let data = [2, 4, 6, 8]
+    print(data[2])
+    data[2] = 0
+    print(data[2])
+
+    return 0
+}
+
+main()

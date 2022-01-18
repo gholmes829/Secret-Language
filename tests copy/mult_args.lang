@@ -1,7 +1,0 @@
-# lots of args
-
-num add(num opd1, num opd2, num opd3, num opd4) {
-    return opd1 + opd2 + opd3 + opd4
-}
-
-print(add(2, 3, 4, 5))  # should be 14

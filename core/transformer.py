@@ -211,6 +211,16 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
             object = ID(meta, args[0])
         return ScopedID(meta, joined, object, args)
 
+    def list_(self, meta, vals):
+        return Array(meta, vals)
+
+    def index(self, meta, idx):
+        raise NotImplementedError
+        # return Index(meta, idx)
+
+    def lval(self, meta, base, indexes):
+        return Index(meta, base, indexes)  # will need to adapt for calls later
+
     simple_id = ID
 
     # call
