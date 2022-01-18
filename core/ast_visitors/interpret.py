@@ -117,7 +117,7 @@ class InternalFunction(InternalCallable):
 class Clock(InternalCallable):
     def __init__(self) -> None:
         super().__init__()
-        self.ret_type = 'void'
+        self.ret_type = 'float'
 
     def __call__(self, interpreter):
         return time.time()
@@ -129,15 +129,23 @@ class Print(InternalCallable):
 
     def __call__(self, interpreter, val):
         print(str(val), flush = True)
-        # return val  # wont work yet bc need to template (?)
+
+class Input(InternalCallable):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ret_type = 'str'
+
+    def __call__(self, interpreter, msg):
+        return input(msg)
 
 # end built ins
 
 
 class Environment:
-    _builtins = builtin_globals = {
+    _builtins = {
         ('clock', Clock()),
-        ('print', Print())
+        ('print', Print()),
+        ('input', Input())
     } 
     def __init__(self, name, enclosing = None) -> None:
         self.scope = {}
@@ -241,9 +249,9 @@ class Interpreter(Visitor):
     def visitNone(self, none_node):
         return self.interpret(super(ast_nodes.None_, none_node))
 
-    def visitUnary(self, unary_node: ast_nodes.UnaryOp):
-        value = self.interpret(unary_node.operand)
-        return unary_node.op(value)
+    def visitUnaryOp(self, unary_node: ast_nodes.UnaryOp):
+        value = unary_node.opd_cast(self.interpret(unary_node.operand))
+        return unary_node.res_cast(unary_node.op(value))
 
     def visitBinOp(self, bin_op_node: ast_nodes.BinOp):
         lhs_value = bin_op_node.lhs_cast(self.interpret(bin_op_node.lhs))

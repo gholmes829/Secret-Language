@@ -41,6 +41,10 @@ class UnaryOp(Expr):
         '-': (lambda opd: -opd, 'negate'),
     }
 
+    type_resolutions = {
+        ('!', bool): (bool, bool),
+    }
+
     def __init__(self, meta, operation, operand) -> None:
         super().__init__(meta)
         self.op_str = operation
@@ -79,6 +83,7 @@ class BinOp(Expr):
         ('>=', float, float): (float, float, bool),
         ('<', float, float): (float, float, bool),
         ('<=', float, float): (float, float, bool),
+        ('!=', str, str): (str, str, bool),
         ('==', float, float): (float, float, bool),
         ('==', str, str): (str, str, bool),
         ('!=', float, float): (float, float, bool),

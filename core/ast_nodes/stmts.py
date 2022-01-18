@@ -35,10 +35,11 @@ class Branch(Stmt):
 
 
 class While(Stmt):
-    def __init__(self, meta, condition, body) -> None:
+    def __init__(self, meta, condition, body, else_block) -> None:
         super().__init__(meta)
         self.condition = condition
         self.body = body
+        self.else_block = else_block
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitWhile(self, *args, **kwargs)

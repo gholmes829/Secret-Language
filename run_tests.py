@@ -23,9 +23,9 @@ def main():
 
     print()
     for test in tqdm(tests):
-        res = run_in_shell(f'python . tests/{test}').strip()
         true_file = test.replace('.lang', '.out')  #  > tests/{test.replace(".lang", ".out")}
         if true_file in files:
+            res = run_in_shell(f'python . tests/{test}').strip()
             with open(f'tests/{true_file}', 'r') as f:
                 truth = f.read().strip()
             

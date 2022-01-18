@@ -75,6 +75,7 @@ class SemanticAnalyzer(Visitor):
                 self.ret_type = Dummy1(val)
         if name == 'clock': return Dummy2(float)
         elif name == 'print': return Dummy2('void')  # hard coded for now, need to find way to add builtins to semantic analysis
+        elif name == 'input': return Dummy2('str')
 
         for scope in reversed(self.scopes):
             if name in scope:
@@ -237,7 +238,7 @@ class SemanticAnalyzer(Visitor):
         self.resolve(un_op_node.operand)
         # need to implement theses
         un_op_node.opd_cast, un_op_node.res_cast = \
-            un_op_node.type_resolutions[un_op_node.op_str, un_op_node.lhs.type, un_op_node.rhs.type]
+            un_op_node.type_resolutions[un_op_node.op_str, un_op_node.operand.type]
 
     def visitCall(self, call_node):
         self.resolve(call_node.name)

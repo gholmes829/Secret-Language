@@ -1,0 +1,12 @@
+# basic input
+
+num main() {
+    let msg = ''
+    until msg == '10' {
+        msg = input('Enter 10 to exit: ')
+    }
+
+    return 0
+}
+
+main()
