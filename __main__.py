@@ -29,12 +29,17 @@ def get_cmd_line_args():
 def unparse_ast(ast):
     print(ast.unparsed())
 
-def graph_ast(ast, src_f):
-    out_dot_path = src_f.replace(f'.{LANG_EXT}', '.dot')
-    out_png_path = src_f.replace(f'.{LANG_EXT}', '.png')
+def graph_ast(parse_tree, src_f):
+    png_path = src_f.replace('.lang', '.png')
+        
+    if not osp.isfile(png_path) or osp.getmtime(src_f) > osp.getmtime(png_path):
+        lark.tree.pydot__tree_to_png(parse_tree, png_path, rankdir='TB')
 
-    utils.write_to_file(out_dot_path, ast.to_dot())
-    utils.run_in_shell(f'dot -Tpng {out_dot_path} -o {out_png_path}')
+    # out_dot_path = src_f.replace(f'.{LANG_EXT}', '.dot')
+    # out_png_path = src_f.replace(f'.{LANG_EXT}', '.png')
+
+    # utils.write_to_file(out_dot_path, ast.to_dot())
+    # utils.run_in_shell(f'dot -Tpng {out_dot_path} -o {out_png_path}')
 
 def cache_ast(ast, src):
     out_pickle_file = src.replace(f'.{LANG_EXT}', '.pickle')
@@ -73,10 +78,6 @@ def main():
         )
         transformer = ASTBuilder()
         parse_tree = parser.parse(src)
-        png_path = args.src_f.replace('.lang', '.png')
-        if not osp.isfile(png_path) or osp.getmtime(args.src_f) > osp.getmtime(png_path):
-            lark.tree.pydot__tree_to_png(parse_tree, png_path, rankdir='TB')
-
         prog = transformer.transform(parse_tree)
 
     else:
@@ -94,7 +95,7 @@ def main():
         prog = parser.parse(src)
 
     if args.unparse: unparse_ast(prog)
-    if args.gen_ast: graph_ast(prog, args.src_f)
+    if args.gen_ast: graph_ast(parse_tree, args.src_f)
     if args.cache: cache_ast(prog, args.src_f)
 
     sys.exit(prog.interpret())
