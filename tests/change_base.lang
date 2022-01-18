@@ -1,0 +1,10 @@
+# convert to bin, hex, and dec
+
+num main() {
+
+    let val = 39
+    print(bin(val))
+    print(hex(val))
+
+    return 0
+}

@@ -1,0 +1,11 @@
+# ping google
+
+num main() {
+    let url = 'https://google.com'
+    let start = clock()
+    let status_code = ping(url)
+    let elapsed = clock() - start
+    print('Status code: ' + status_code)
+    print('Elapsed: ' + elapsed)
+    return 0
+}

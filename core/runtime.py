@@ -5,16 +5,11 @@ Contains:
  - environment
 """
 
-from ast import Not
 import sys
 import subprocess
 import time
-
-
 from abc import ABCMeta, abstractmethod
-
-
-
+import requests
 
 
 # internals
@@ -124,6 +119,8 @@ class InternalFunction(InternalCallable):
 
 
 # builtins
+# TODO add support for different arg types
+# get a list of all subclasses and register them?
 class BuiltinCallable(InternalCallable):
     def __init__(self, name, ret_type, arg_type) -> None:
         super().__init__()
@@ -196,6 +193,45 @@ class Range(BuiltinCallable):
     def __call__(self, interp, length):
         return list(range(int(length)))
 
+class Hex(BuiltinCallable):
+    def __init__(self) -> None:
+        super().__init__('hex', str, (float,))
+
+    def __call__(self, interp, val):
+        int_val = int(val)
+        assert int_val == val
+        return hex(int_val)
+
+class Bin(BuiltinCallable):
+    def __init__(self) -> None:
+        super().__init__('bin', str, (float,))
+
+    def __call__(self, interp, val):
+        int_val = int(val)
+        assert int_val == val
+        return bin(int_val)
+
+class Dec(BuiltinCallable):
+    def __init__(self) -> None:
+        super().__init__('dec', str, (float,))
+
+    def __call__(self, interp, val: str):
+        if len(val) < 3:
+            raise RuntimeError(1, f'can not convert "{val}" to decimal')
+        elif val.startswith('0b'):
+            return int(val, 2)
+        elif val.startswith('0x'):
+            return int(val, 16)
+        else:
+            raise RuntimeError(1, f'can not convert "{val}" to decimal')
+
+class Ping(BuiltinCallable):
+    def __init__(self) -> None:
+        super().__init__('ping', str, (str,))
+
+    def __call__(self, interp, url):
+        return float(requests.get(url).status_code)
+
 
 # environment
 class Environment:
@@ -208,6 +244,10 @@ class Environment:
         Exit(),
         Range(),
         Shell(),
+        Hex(),
+        Bin(),
+        Dec(),
+        Ping(),
     }
     def __init__(self, name, enclosing = None) -> None:
         self.scope = {}
