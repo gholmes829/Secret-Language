@@ -4,7 +4,7 @@ num main() {
     let start = clock()
     print('0')
     for i in 10 {
-        sleep(1)
+        sleep(0.1)
         print(int(clock() - start))
     }
 

@@ -1,7 +1,7 @@
 # shell
 
 num main() {
-    let cmd = 'pwd'
+    let cmd = 'echo test'
     print(shell(cmd))
     return 0
 }
