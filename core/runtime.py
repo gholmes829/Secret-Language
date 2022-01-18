@@ -125,7 +125,7 @@ class InternalFunction(InternalCallable):
 
 # builtins
 class BuiltinCallable(InternalCallable):
-    def __init__(self, name, arg_type, ret_type) -> None:
+    def __init__(self, name, ret_type, arg_type) -> None:
         super().__init__()
         self.name = name
         self.arg_types = arg_type
