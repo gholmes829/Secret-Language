@@ -3,7 +3,7 @@
 """
 
 import os.path as osp, os
-from tqdm import tqdm
+from tqdm.contrib.concurrent import thread_map
 
 from icecream import ic
 from core.utils import run_in_shell
@@ -22,7 +22,7 @@ def main():
     na = set()
 
     print()
-    for test in tqdm(tests):
+    def run_test(test):
         true_file = test.replace('.lang', '.out')  #  > tests/{test.replace(".lang", ".out")}
         if true_file in files:
             res = run_in_shell(f'python . tests/{test}').strip()
@@ -35,7 +35,9 @@ def main():
                 failed.add(test)
         else:
             na.add(test)
-
+        
+    thread_map(run_test, tests)
+    
     print()
     if passed:
         print('The following test cases PASSED')
