@@ -206,3 +206,9 @@ class Interpreter(Visitor):
 
     def visitArray(self, array_node):
         return InternalArray(array_node.values, array_node.type)
+
+    def visitTryCatch(self, try_catch):
+        try:
+            self.interpret(try_catch.try_.body)
+        except try_catch.catch.exception as err:
+            self.interpret(try_catch.catch.body)

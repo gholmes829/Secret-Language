@@ -85,3 +85,32 @@ class SetStmt(Stmt):
     
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitSetStmt(self, *args, **kwargs)
+
+
+class TryCatch(Stmt):
+    def __init__(self, meta, try_, catch, finally_) -> None:
+        super().__init__(meta)
+        self.try_ = try_
+        self.catch = catch
+        self.finally_ = finally_
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitTryCatch(self, *args, **kwargs)
+
+class Try(Stmt):
+    def __init__(self, meta, body) -> None:
+        super().__init__(meta)
+        self.body = body
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitTry(self, *args, **kwargs)
+
+class Catch(Stmt):
+    def __init__(self, meta, exception, alias, body) -> None:
+        super().__init__(meta)
+        self.exception = Exception  # exception
+        self.alias = alias
+        self.body = body
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitCatch(self, *args, **kwargs)

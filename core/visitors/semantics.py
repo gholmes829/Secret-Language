@@ -4,15 +4,25 @@
 
 from icecream import ic
 from core import nodes
-from core.runtime import Environment
 from core.visitors.visitor import Visitor
 
 
+
+class Outer:
+    class Inner:
+        def __init__(self, val):
+            self.type = val
+    def __init__(self, val):
+        self.ret_type = Outer.Inner(val)
 
 class ScopeStack:
     def __init__(self) -> None:
         self.scopes = [{}]
         self.names = ['globals']
+
+        from core.builtins import BuiltinCallable
+        for builtin in BuiltinCallable.registered:
+            self.top[builtin.name] = {'init': True, 'type': Outer(builtin.ret_type)}
         # add builtins to global here
 
     @property
@@ -46,14 +56,6 @@ class ScopeStack:
     def __len__(self):
         return len(self.scopes)
 
-# Inner and Outer are noops
-class Inner:
-    def __init__(self, val) -> None:
-        self.type = val
-
-class Outer:
-    def __init__(self, val) -> None:
-        self.ret_type = Inner(val)
 
 class SemanticAnalyzer(Visitor):
     def __init__(self, interpreter) -> None:
@@ -72,10 +74,6 @@ class SemanticAnalyzer(Visitor):
         self.scopes.top[node.name]['init'] = True
 
     def get_type(self, name):
-        for builtin in Environment.builtins:
-            if builtin.name == name:
-                return Outer(builtin.ret_type)
-
         for scope in reversed(self.scopes):
             if name in scope:
                 return scope[name]['type']
@@ -274,3 +272,12 @@ class SemanticAnalyzer(Visitor):
         index_node.type = self.get_type(index_node.name)
         self.resolve_local(index_node.base, index_node.name)
     
+    def visitTryCatch(self, tc_node):
+        self.resolve(tc_node.try_)
+        self.resolve(tc_node.catch)
+
+    def visitTry(self, try_node):
+        self.resolve(try_node.body)
+
+    def visitCatch(self, catch_node):
+        self.resolve(catch_node.body)

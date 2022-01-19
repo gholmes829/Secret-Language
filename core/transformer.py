@@ -239,3 +239,15 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     # literals
     NUMBER, STRING, BOOLEAN, NONE = NumLit, StrLit, BoolLit, None_
+
+    def attempt(self, meta, try_, catch, finally_):
+        return TryCatch(meta, try_, catch, finally_)
+
+    def try_(self, meta, body):
+        return Try(meta, body)
+
+    def catch_(self, meta, exception, alias, body): 
+        return Catch(meta, exception, alias, body)
+
+    def negate(self, meta, val):
+        return UnaryOp(meta, '-', val)

@@ -137,10 +137,10 @@ return_: "return" [expr]
 
 
 // <- Try Catch ->
-attempt: try catch+ [finally]
-try: "try" block
-catch: "catch" (any_id | call) ["as" any_id] block
-finally: "finally" block | else
+attempt: try_ catch_+ [finally_]
+try_: "try" block
+catch_: "catch" (any_id | call) ["as" any_id] block
+finally_: "finally" block | else
 
 // <- Exceptions ->
 throw: "throw" any_id

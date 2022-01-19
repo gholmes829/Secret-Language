@@ -43,6 +43,7 @@ class UnaryOp(Expr):
 
     type_resolutions = {
         ('!', bool): (bool, bool),
+        ('-', float): (float, float)
     }
 
     def __init__(self, meta, operation, operand) -> None:

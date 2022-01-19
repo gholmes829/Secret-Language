@@ -1,0 +1,13 @@
+
+
+num main() {
+    try {
+        let data = [1.23, 1.5, 2.26]
+        print(data[1])
+    }
+    catch Exception {
+        print('Gotcha!')
+    }
+
+    return 0
+}

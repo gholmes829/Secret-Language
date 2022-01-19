@@ -1,0 +1,7 @@
+
+
+num main() {
+    let data = -1.24
+    print(data)
+    return 0
+}
