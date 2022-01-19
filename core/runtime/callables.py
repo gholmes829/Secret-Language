@@ -9,24 +9,6 @@ from abc import ABCMeta, abstractmethod
 from icecream import ic
 
 # internals
-class InternalArray:
-    def __init__(self, values, type_) -> None:
-        self.values = values
-        self.type = type_
-
-    def __getitem__(self, idx):
-        return self.values[idx]
-
-    def __setitem__(self, idx, val):
-        self.values[idx] = val
-
-    def __len__(self):
-        return len(self.values)
-
-    def __repr__(self):
-        return repr(self.values)
-
-
 class ReturnInterrupt(Exception):
     def __init__(self, val) -> None:
         super().__init__()
@@ -116,7 +98,7 @@ class InternalFunction(InternalCallable):
 
 # environment
 class Environment:
-    from core.builtins import BuiltinCallable
+    from core.runtime.builtins import BuiltinCallable
     def __init__(self, name, enclosing = None) -> None:
         self.scope = {}
         self.name = name

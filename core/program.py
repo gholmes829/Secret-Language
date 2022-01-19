@@ -14,7 +14,7 @@
 
 from core.visitors.semantics import SemanticAnalyzer as SA
 from core.visitors import Unparser, GraphManager, Interpreter
-from core.runtime import ReturnInterrupt
+from core.runtime.callables import ReturnInterrupt
 
 
 class Program:

@@ -20,7 +20,7 @@ class ScopeStack:
         self.scopes = [{}]
         self.names = ['globals']
 
-        from core.builtins import BuiltinCallable
+        from core.runtime.builtins import BuiltinCallable
         for builtin in BuiltinCallable.registered:
             self.top[builtin.name] = {'init': True, 'type': Outer(builtin.ret_type)}
         # add builtins to global here

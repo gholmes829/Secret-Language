@@ -8,7 +8,7 @@ import time
 import subprocess
 import sys
 import requests
-from core.runtime import InternalCallable
+from core.runtime.callables import InternalCallable
 
 
 """

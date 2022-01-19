@@ -5,9 +5,10 @@
 from icecream import ic
 from pipe import traverse, where
 
-from core.runtime import *
 from core.visitors.visitor import Visitor
 from core import nodes
+from core.runtime.callables import *
+from core.runtime.literals import *
 
 # could make builtins their own special scope before globals
 

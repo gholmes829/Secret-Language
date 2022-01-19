@@ -1,0 +1,38 @@
+
+class A {
+    void init() {
+
+    }
+
+    void id() {
+        print('A')
+    }
+}
+
+class B(A) {
+    void init() {
+
+    }
+
+    void id() {
+        print('B')
+    }
+}
+
+class C(B) {
+    void init() {
+
+    }
+
+    void id() {
+        super.id()
+    }
+}
+
+num main() {
+    let c = C()
+
+    c.id()
+
+    return 0
+}
