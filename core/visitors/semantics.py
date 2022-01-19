@@ -6,7 +6,7 @@ from icecream import ic
 from core import nodes
 from core.visitors.visitor import Visitor
 
-
+# multiple inheritance, either disallow ambiguous calls or MRO from left to right of inheritance call
 
 class Outer:
     class Inner:
@@ -280,4 +280,9 @@ class SemanticAnalyzer(Visitor):
         self.resolve(try_node.body)
 
     def visitCatch(self, catch_node):
+        # will need to resolve exception(s) in future
         self.resolve(catch_node.body)
+
+    def visitThrow(self, throw_node):
+        # will need to resolve exception in future
+        pass

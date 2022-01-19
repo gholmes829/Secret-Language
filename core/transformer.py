@@ -251,3 +251,6 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
 
     def negate(self, meta, val):
         return UnaryOp(meta, '-', val)
+
+    def throw(self, meta, exception):
+        return Throw(meta, exception)

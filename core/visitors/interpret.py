@@ -212,3 +212,6 @@ class Interpreter(Visitor):
             self.interpret(try_catch.try_.body)
         except try_catch.catch.exception as err:
             self.interpret(try_catch.catch.body)
+
+    def visitThrow(self, throw_node):
+        raise throw_node.exception

@@ -114,3 +114,12 @@ class Catch(Stmt):
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitCatch(self, *args, **kwargs)
+
+
+class Throw(Stmt):
+    def __init__(self, meta, exception) -> None:
+        super().__init__(meta)
+        self.exception = exception
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitThrow(self, *args, **kwargs)

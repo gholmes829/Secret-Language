@@ -1,0 +1,14 @@
+
+
+num main() {
+    
+    try {
+        let num = 2
+        if num == 2 { throw Exception }
+        print('Not caught...')
+    }
+    catch Exception {
+        print('Caught!')
+    }
+    return 0
+}
