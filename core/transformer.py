@@ -1,6 +1,12 @@
 """
 Transforms lark tokens and trees into desugared components.
 When used as a lark transformer, this class defines how the AST nodes are built.
+
+// RECOGNIZES TRUE LVALS (DFA PROOF):
+// lval: identifier | index
+// identifier: NAME | (identifier | call | index) "." NAME -> getattr
+// index: (lval | call) "[" subscriptlist "]" -> getitem
+// call: (lval | call) "(" arguments ")"
 """
 
 # type of fn obj is <func> (+args?), type of class obj is <class>, nothing else (I think)

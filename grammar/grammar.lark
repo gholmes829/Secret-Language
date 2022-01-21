@@ -1,384 +1,141 @@
-// main grammar file
-
-// Still need to add (key language):
-// ==================
-// basic templating to specify type (like python typing)
-// concurrency/ async
-// Pattern matching
-// Other built in types (?): hex, list, dict, set, tuple
-// next and whatever else to support range-based iteration
-// specify if overriding, implementing interfaces
-// F string and string formatting/ templating
-// enable commas, parens in for loop
-// binary, hex, byte literals?
-// *, ** like in Python
-// Pipes and redirection?? use |> as operator perhaps
-// expr or expr (like Python) (might just be a matter of overloading or method between types?)
-// specify if pure to enable optimizations (?)
-// Entry keyword to designate starting fn (as opposed to num main() { return 0 })
-// using () and \ to allow multiple line spacing
-// make sure ((inner) => {})(arg) like in JS
-// allow assigning to lambda fn i.e. num func = (num arg) -> num {}
-// haskell function call pattern matching?
-// function overloading (an alternative to generics?)
-// assign built-in that sets attribute and returns var that got modified
-// generators
-// https://medium.com/@kasperpeulen/10-features-from-various-modern-languages-that-i-would-like-to-see-in-any-programming-language-f2a4a8ee6727:
-// implicit name ("it") for single param lambda functions
-// cascade / spread operator? (merge objects)
-// automatic currying (https://reasonml.github.io/docs/en/function.html#currying) (or partial functions? func.partial(a = 2, b = 2) for func(a, b, c) { return a + b + c}. See C++ bind, specialization)
-// function and class extensions
 //
-// consider letting var decl without assignment
-// allow traditional for loops ( for (let i = 0; i < 10; i++) {} ) in addition to curr
-// access dictionaries using ".key" in addition to "['key']"
-// pass variables by reference
-// have $ or % or @ or smth replace self when referring to instance state vars
+
+root: (import_stmt | assign_decl_stmt | def_stmt)*
+stmt: compound_stmt | simple_stmt
+?compound_stmt: branch_stmt | loop_stmt | for_stmt | with_stmt | try_catch_stmt | def_stmt
+?simple_stmt: assign_decl_stmt | assign_stmt | import_stmt | call_expr_stmt | flow_stmt
+?flow_stmt: "break" -> break_stmt
+    | "continue" -> continue_stmt
+    | "return" [expr] -> return_stmt
+    | "throw" expr -> throw_stmt
+    | "yield" expr -> yield_stmt
+
+branch_stmt: simple_branch_stmt ("else" simple_branch_stmt)* else_stmt?
+?simple_branch_stmt: "if" expr "{" body "}" -> if_branch_stmt
+    | "unless" expr "{" body "}" -> unless_branch_stmt
+else_stmt: "else" "{" body "}"
+
+?loop_stmt: "until" expr "{" body "}" [else] -> until_loop
+    | "while" expr "{" body "}" [else] -> while_loop 
+
+for_stmt: "for" _comma_del{expr} ("in" | ":") expr "{" body "}" [else_stmt]
+
+with_stmt: "with" _comma_del{with_item} "{" body "}"
+with_item: expr ["as" expr]
+
+try_catch_stmt: try_stmt catch_stmt+ [else_stmt] [finally_stmt]
+try_stmt: "try" "{" body "}"
+catch_stmt: "catch" expr ["as" NAME] "{" body "}"
+finally_stmt: "finally" "{" body "}"
+
+def_stmt: decorated_def_stmt
+?decorator: "@" ref_expr ["(" arguments ")"]
+?decorated_def_stmt: decorators? templated_def_stmt
+?templated_def_stmt: templating? def_stmt
+?simple_def_stmt: "class" NAME ["(" expr ")"] "{" [class_body] "}" -> cls_def
+    | "func" [modifiers] NAME "(" [typed_arguments] ")" "->" ret_type "{" body "}" -> fn_def
+
+assign_decl_stmt: "let" _comma_del{decl_identifier} "=" assign_stmt
+decl_identifier: [type_modifiers] NAME
+assign_stmt: _comma_del{expr} "=" assign_stmt | _comma_del{expr}
+
+import_stmt: import_name | import_from
+import_name: "import" dotted_as_names
+import_from: "from" (dots? dotted_name | dots) "import" ("*" | "(" import_as_names ")" | import_as_names)
+!dots: "."+
+import_as_name: NAME ["as" NAME]
+dotted_as_name: dotted_name ["as" NAME]
+import_as_names: import_as_name ("," import_as_name)* [","]
+dotted_as_names: dotted_as_name ("," dotted_as_name)*
+dotted_name: NAME ("." NAME)*
+
+?atom_expr: atom_expr "(" [arguments] ")" -> call
+    | atom_expr "[" subscriptlist "]" -> getitem
+    | atom_expr "." NAME -> getattr
+    | atom
+
+?atom: "(" yield_expr ")"
+    | "(" [_comma_del{expr} [","]] ")" -> tuple
+    | "(" comprehension{expr} ")" -> tuple_comprehension
+    | "[" [_comma_del{expr} [","]] "]" -> list
+    | "[" comprehension{expr} "]"  -> list_comprehension
+    | "<" [_comma_del{expr} [","]] ">" -> dict
+    | "<" comprehension{key_value} ">" -> dict_comprehension
+    | "{" [_comma_del{expr} [","]] "}" -> set
+    | "{" comprehension{expr} "}" -> set_comprehension
+    | NAME -> var
+    | number 
+    | string_concat
+    | "(" expr ")"
+    | "none" -> none_lit
+    | "true" -> true_lit
+    | "false" -> false_lit
+    | anon_fn
+
+bool_lit: true_lit | false_lit
+key_value: expr ":" expr
+?string_concat: string+
+
+arguments: _comma_del{argvalue}
+?argvalue: expr ("=" expr)?
+
+expr: !operation ("if" | "unless") operation "else" expr -> conditional
+    | operation "where" NAME "=" expr -> deffered_expr
+    | NAME ":=" expr -> assign_expr
+    | operation
+
+operation: or_op
+?or_op: _del{and_op, "or"}
+?and_op: _del{not_op, "and"}
+?not_op: "not" not_op | comparison
+?!comparison: _del{bw_or_op, ("<"|">"|"=="|">="|"<="|"!="|"in"|"not" "in"|"is"|"is" "not")}
+?bw_or_op: _del{bw_xor_op, "|"}
+?bw_xor_op: _del{bw_xor_op, "^"}
+?bw_and_op: _del{bw_shift_op, "&"}
+?!bw_shift_op: _del{arith_op, ("<<" | ">>")}
+?!arith_op: _del{term, ("+" | "-")}
+?!term: _del{factor, ("*"|"@"|"/"|"%"|"//"))
+?!factor: ("+"|"-"|"~") factor | power
+?power: 
+ ("**" factor)?
 
 
-// Tentative:
-// ======================
-// do something w semicolons??
-// do something w $??
-// do something w #??
-// auto keyword for type inference when dealing with pure fns or smth (??)
-// default baked in math consts like pi, e?
-// add structs?
-// could theoretically make fn return type implicit (prob don't want to tho)
-// could maybe be an "Any" type? Prob not tho...
-
-// Tools:
-// ========================
-// line inspection like tools
-// stuff like __line__ and __file__
-// size kw to get size of object
-// regex
-
-// Done: (yay!)
-// ========================
-// Xor logic operator \DONE!
-// keyword arguments
-// module, floor division, exponent
-// Ternary expr
-// python "var = expr if cond else expr"
-// bitwise or + and + xor
-// for else, while else loops
-// inf, ninf, (nan?) keywords
-// Context managers (with, as)
-// throw exceptions (try, catch, finally, else, throw)
-// anon fns
-// where deferment
-// In place walrus assignment
-// let indexes work like [2, 4, 1]
-// Variable unpacking
-// List/ dict/ set comprehension (indexing in general) (I think this works??)
-// allow user to parameterize their classes with <>? as generic?
-// should "as" keyword be more generalized?
+comprehension{comp_result}: comp_result comp_fors [comp_if]
+comp_fors: comp_for+ 
+comp_for: "for" _comma_del{expr} "in" expr
+?comp_if: "if" expr
 
 
-// GLOBAL
-// ======
-root: global*
-
-?global: import
-    | assign_decl
-    | fn_def
-    | cls_def
-
-COMMENT: "#" /[^\n]/*
-%ignore COMMENT
-
-WS: /[ \t\f\r\n]/+
-%ignore WS
-// END GLOBALS
-// ===========
-
-
-
-// STATEMENTS
-// ==========
-?stmt: ctrl
-    | assign_decl
-    | assign
-    | fn_def
-    | cls_def
-    | context_manager
-    | attempt
-    | throw
-    | import
-    | call
-
-
-// <- Control Statements ->
-?ctrl: branch
-    | loop
-    | for_
-    | return_
-
-// shared
-?condition: expr
-
-// branch stmt
-SUPPOSITION: ("if" | "unless")
-branch: primary_branch secondary_branch* else?
-primary_branch: SUPPOSITION condition block
-secondary_branch: "else" SUPPOSITION condition block
-else: "else" block
-
-// loop
-LOOP_TYPE: ("while" | "until")
-loop: LOOP_TYPE condition loop_block [else]
-
-// for stmt
-for_: "for" simple_id ("in" | ":") expr loop_block [else]
-
-// return
-return_: "return" [expr]
-
-
-// <- Try Catch ->
-attempt: try_ catch_+ [finally_]
-try_: "try" block
-catch_: "catch" (any_id | call) ["as" any_id] block
-finally_: "finally" block | else
-
-// <- Exceptions ->
-throw: "throw" any_id
-
-
-// <- Imports ->
-import: "from" any_id "import" imported_object ("," imported_object)*
-imported_object: any_id ["as" simple_id]
-
-
-// <- Assignment ->
-// shared
-exprs: expr ("," expr)*
-
-// variable
-assign_decl: "let" declared_identifiers "=" exprs  // multiple on both sides for unpacking
-declared_identifiers: declared_identifier ("," declared_identifier)*
-declared_identifier: [mutability_modifier] [scope_modifier] [execution_modifier] CNAME
-
-alias_assign: lvals "as" any_ids  // might need to double check this later on
-
-assign: lvals "=" exprs
-
-
-// <- Definitions ->
-definition: cls_def | fn_def
-
-// shared
-?decorator: "@" (any_id | call)
-
-// classes
-cls_def: [decorator] [generics] "class" simple_id ["(" any_id ")"] "{" [cls_stmts] "}"
-cls_stmts: (method | assign_decl)*
-method: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
-this_id: THIS
-THIS.1: "this"
-
-super_id: SUPER
-SUPER.1: "super"
-
-// functions
-fn_def: [decorator] [generics] [mutability_modifier] [scope_modifier] type_ simple_id "(" [formals] ")" block
-formals: formal ("," formal)*
-formal: type_ simple_id
-
-generics: "template" "<" simple_ids ">"
-
-
-// <- Scoping ->
-// basic loop
-CONTROL_MODIFIER: "break" | "continue"
 body: stmt*
-loop_body: (stmt | CONTROL_MODIFIER)*
-block: "{" body "}"
-loop_block: "{" loop_body "}" -> block
 
-// context manager
-context_manager: "with" expr block
+_comma_del{x}: _del{x, ","}
+_del{x, del}: x (del x)*
 
+number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER | INF | NINF
+string: STRING | LONG_STRING
 
-// END STATEMENTS
-// ==============
+STRING: /([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
+_SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
+DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*
+          |   "0"             ("_"?  "0"                            )* /(?![1-9])/
+HEX_NUMBER.2: "0" ("x" | "X") ("_"? ("0".."9" | "a".."f" | "A".."F"))+
+OCT_NUMBER.2: "0" ("o" | "O") ("_"?  "0".."7"                       )+
+BIN_NUMBER.2: "0" ("b" | "B") ("_"?  "0".."1"                       )+
 
-
-// TYPING
-// ======
-// <- Typing ->
-types: type_ ("," type_)*
-?type_: (primitive_type | parameterized_object_type) [execution_modifier]  // should this also be prepended w scope modifier?
-
-// shared
-parameterization: "<" types ">"
-
-parameterized_object_type: object_type [parameterization]
-    //| container_type [parameterization] -> parameterized_container_type  // might not be needed it treating construction as builtin
-
-?!mutability_modifier: "const"
-?!scope_modifier: "static" | "global"
-?!execution_modifier: "channel"
-
-// primitive types
-?!primitive_type: "bool"
-    | "num"
-    | "str"
-    | "nonetype"
-    | "void"
-
-// object types
-?object_type: fn_type
-    | any_id
-
-?fn_type: [mutability_modifier] [scope_modifier] "(" "[" [types] "]" "->" type_ ")"  // change this to align w py typing module
-
-// container types  // might not be needed it treating construction as builtin
-// container_type: "set" | "dict" | "tuple"
-
-
-// END TYPING
-// ==========
-
-
-
-// EXPRESSIONS
-// ===========
-?expr: unary_op
-    | bin_op
-    | ternary_op
-    | conditional
-    | deffered
-    | alias_assign
-    | walrus
-    | term
-
-
-// <- Operations ->
-unary_op: ("not" | "!") expr -> l_not
-    | "-" term -> negate
-
-!bin_op: expr "-" term
-    | expr "+" term
-    | expr "*" term
-    | expr "//" term
-    | expr "/" term
-    | expr "%" term
-    | expr "**" term
-    | expr ("and" | "&&") term
-    | expr ("or" | "||") term
-    | expr ("xor" | "^^") term
-    | expr "&" term
-    | expr "|" term
-    | expr "^" term
-    | expr "==" term
-    | expr "!=" term
-    | expr ">" term
-    | expr ">=" term
-    | expr "<" term
-    | expr "<=" term
-
-ternary_op: expr "?" expr ":" expr
-
-
-// <- Terms ->
-?term: literal
-    | "(" expr ")" -> paren_expr
-    | call
-    | lval
-
-
-// <- Other ->
-conditional: "(" expr SUPPOSITION expr ("else" expr SUPPOSITION expr)* "else" expr ")"
-walrus: any_ids ":=" exprs  // could be ambiguous sommetimes?
-deffered: expr "where" any_id "=" expr
-
-
-// <- Call ->
-call.1: term "(" [actuals] ")"  // should allow chaining
-?actuals: actual ("," actual)*
-?actual: expr
-    | simple_id "=" expr -> kwarg
-
-
-// <- References
-lvals: lval ("," lval)*
-?lval: any_id[index+] | call index+
-
-// identifiers
-?any_ids: any_id ("," any_id)*
-?any_id: scoped_id | simple_id | this_id
-
-scoped_ids: scoped_id ("," scoped_id)*
-scoped_id: this_id ("." CNAME)+ | super_id ("." CNAME)+ | CNAME ("." CNAME)+
-
-simple_ids: simple_id ("," simple_id)*
-simple_id: CNAME
-
-// indexes and other access
-?index: "[" expr ("," expr)* "]"
-
-
-// <- Literal Values ->
-literals: literal ("," literal)*
-?literal: object | primitive
-
-// objects
-objects: anon_fns
-?object: anon_fn | container
-
-anon_fns: anon_fns ("," anon_fns)*
-anon_fn: "(" formals ")" "->" type_ block  // this is an expr that contains stmts ...tricky
-
-// containers
-containers: sets | lists | tuples | dicts  // should there be list of x comprehensions here?
-?container: set | list_ | tuple | dict | set_comp | list_comp | dict_comp
-
-sets: set ("," set)*
-set_comp: "{" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] "}"
-set: "{" [exprs] "}"
-
-lists: list_ ("," list_)*
-list_comp: "[" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] "]"
-list_: "[" [exprs] "]"
-
-tuples: tuple ("," tuple)*
-// add generator comprehension as well!
-tuple: "(" [exprs] ")"
-
-dicts: dicts ("," dicts)*
-dict_comp: "<" expr ":" expr "for" simple_id ("in" | ":") expr [SUPPOSITION expr] ">"
-dict: "<" [items] ">"
-
-items: item ("," item)*
-item: expr ":" expr
-
-// primitive
-primitives: NUMBERS | STRINGS | BOOLEANS | NONES
-?primitive: NUMBER | STRING | BOOLEAN | INF | NINF | NONE
-
-NUMBERS: NUMBER ("," NUMBER)*
-NUMBER: SIGNED_NUMBER | INF | NINF
-
-STRINGS: STRING ("," STRING)*
-STRING: "\"" STRING_INNER "\"" | "'" STRING_INNER "'"
-
-BOOLEANS: BOOLEAN ("," BOOLEAN)*
-BOOLEAN: "true" | "false"
-
-NONES: NONE ("," NONE)
-NONE: "none"
+_EXP: ("e"|"E") ["+" | "-"] _SPECIAL_DEC
+DECIMAL: "." _SPECIAL_DEC | _SPECIAL_DEC "." _SPECIAL_DEC?
+FLOAT_NUMBER.2: _SPECIAL_DEC _EXP | DECIMAL _EXP?
+IMAG_NUMBER.2: (_SPECIAL_DEC      | FLOAT_NUMBER) ("J" | "j")
 
 INF: "inf"
 NINF: "ninf"
 
+NAME: /[^\W\d]\w*/
+COMMENT: "#" /[^\n]/*
+WS_INLINE: (" "|/\t/)+
+WS: /[ \t\f\r\n]/+
 
-// END EXPR
-// ========
-
-
-%import common.SIGNED_NUMBER
-%import common._STRING_ESC_INNER -> STRING_INNER
-%import common.CNAME
+%ignore COMMENT
+%ignore WS
