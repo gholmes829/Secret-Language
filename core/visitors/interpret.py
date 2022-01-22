@@ -54,8 +54,11 @@ class Interpreter(Visitor):
     def visitLiteral(self, literal_node: nodes.Literal):
         return literal_node.value
 
-    def visitNumLit(self, num_lit_node):
-        return self.interpret(super(nodes.NumLit, num_lit_node))
+    def visitFloat(self, float_node):
+        return self.interpret(super(nodes.Float, float_node))
+
+    def visitInt(self, int_node):
+        return self.interpret(super(nodes.Int, int_node))
 
     def visitStrLit(self, str_lit_node):
         return self.interpret(super(nodes.StrLit, str_lit_node))
@@ -79,8 +82,8 @@ class Interpreter(Visitor):
         val = self.interpret(ad_node.rhs)
         self.env.define(ad_node.lhs.name, val)
 
-    def visitID(self, id_node):
-        return self.look_up_var(id_node, id_node.name)
+    def visitVar(self, id_node):
+        return self.look_up_var(id_node, id_node.ident_token)
         # return self.env.get(id_node.name)  # pre-bind version
 
     def visitThisID(self, this_id_node):
@@ -141,7 +144,7 @@ class Interpreter(Visitor):
             self.interpret(while_node.body)
 
     def visitCall(self, call_node: nodes.Call):
-        fn = self.interpret(call_node.name)
+        fn = self.interpret(call_node.ident)
         args = [self.interpret(arg) for arg in call_node.actuals]
         assert isinstance(fn, InternalCallable)
         return fn(self, *args)
@@ -179,8 +182,12 @@ class Interpreter(Visitor):
         
         return res[0]
 
-    def visitFnObj(self, fn_def_node):
-        return InternalFunction(fn_def_node, self.env, False)
+    def visitFuncObj(self, fn_def_node: nodes.FuncObj):
+        fn = InternalFunction(fn_def_node, self.env, False)
+        if fn_def_node.ident:  # trying to say "if def func and not anon func"
+            self.env.define(fn_def_node.ident.ident_token, fn)
+            return
+        return fn
 
     def visitReturn(self, return_node):
         raise ReturnInterrupt(self.interpret(return_node.expr))
@@ -189,7 +196,7 @@ class Interpreter(Visitor):
     def visitPrimitiveType(self, obj_type_node):
         raise NotImplementedError
 
-    def visitFnType(self, fn_sig_node):
+    def visitFuncType(self, fn_sig_node):
         raise NotImplementedError
 
     def visitIndex(self, index_node):

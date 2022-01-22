@@ -7,7 +7,7 @@ from icecream import ic
 from pydot import Node
 
 from core.nodes.node import ASTNode, NodeList
-from core.nodes.types import ClassType, FnType, ObjectType
+from core.nodes.types import ClassType, FuncType, ObjectType
 
 
 class Expr(ASTNode):
@@ -105,9 +105,9 @@ class BinOp(Expr):
 
 # fn calls
 class Call(Expr):
-    def __init__(self, meta, name, actuals) -> None:
+    def __init__(self, meta, ident, actuals) -> None:
         super().__init__(meta)
-        self.name = name
+        self.ident = ident
         self.actuals = NodeList(meta, list(filter(lambda arg: arg, actuals)), 'actuals')
         if isinstance(self.actuals, NodeList) and len(self.actuals) == 1 and isinstance(self.actuals[0], NodeList):
             self.actuals = self.actuals[0]
@@ -116,29 +116,21 @@ class Call(Expr):
         return visitor.visitCall(self, *args, **kwargs)
 
     def __repr__(self):
-        return f'<CallNode "{self.name}" w/ {len(self.actuals)} actuals at {id(self)} >'
+        return f'<CallNode "{self.ident}" w/ {len(self.actuals)} actuals at {self.id} >'
 
 
-# references
-class Reference(Expr):
-    dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgoldenrod', shape='rectangle')
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-class ID(Reference):
-    def __init__(self, meta, id_token, **kwargs) -> None:
+class Var(Expr):
+    def __init__(self, meta, ident_token) -> None:
         super().__init__(meta)
-        assert not isinstance(id_token, ID), ic(id_token, id_token.name)
-        self.name = id_token
-        self.mods = kwargs
+        self.ident_token = ident_token
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitID(self, *args, **kwargs)
+        return visitor.visitVar(self, *args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'<ID "{self.name}" at {id(self)}>'
+        return f'<Var "{self.ident_token}" at {self.id}>'
 
-class ScopedID(Reference):
+class ScopedID(Expr):
     def __init__(self, meta, name, object, id_tokens) -> None:
         super().__init__(meta)
         self.name = name
@@ -151,7 +143,7 @@ class ScopedID(Reference):
     def __repr__(self) -> str:
         return f'<ScopedID "{self.name}" at {id(self)}>'
 
-class ThisID(Reference):
+class ThisID(Expr):
     def __init__(self, meta, name, object, id_tokens) -> None:
         super().__init__(meta)
         self.name = name
@@ -165,7 +157,7 @@ class ThisID(Reference):
     def __repr__(self) -> str:
         return f'<ThisID at {id(self)}>'
 
-class SuperID(Reference):
+class SuperID(Expr):
     def __init__(self, meta, name, object, id_tokens) -> None:
         super().__init__(meta)
         self.name = name
@@ -189,27 +181,25 @@ class Object(Expr):
         raise NotImplementedError
 
 
-class FnObj(Object):  # inherit from new Obj (differentiate primative from obj maybe)
-    def __init__(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, formals, body) -> None:
-        super().__init__(meta, FnType(meta, mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
-        self.identifier = str(id(self))
-        self.generics = generics
-        self.mutability_mod = mutability_mod
-        self.scope_mod = scope_mod
-        self.decorator = decorator
-        self.formals = formals or []
+class FuncObj(Object):  # inherit from new Obj (differentiate primative from obj maybe)
+    def __init__(self, meta, ident, formals, ret_type, body) -> None:
+        assert formals is not None
+        super().__init__(meta, FuncType(meta, [formal.type for formal in formals], ret_type))
+        self.ident = ident
+        self.formals = formals
+        self.ret_type = ret_type
         self.body = body
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnObj(self, *args, **kwargs)
+        return visitor.visitFuncObj(self, *args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'<"fn_obj" at {id(self)}>'
+        return f'<FuncObj: "{self.ident}" - ([{", ".join(self.formals)}] -> {self.ret_type}) {{...}} at {self.id}>'
 
 
 class MethodObj(Object):
     def __init__(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, formals, body) -> None:
-        super().__init__(meta, FnType(meta, mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
+        super().__init__(meta, FuncType(meta, mutability_mod, scope_mod, ret_type, [formal.type for formal in (formals or [])]))
         self.identifier = str(id(self))
         self.generics = generics
         self.mutability_mod = mutability_mod
@@ -239,9 +229,8 @@ class ClassObj(Object):
 
 # literals
 class Literal(Expr):
-    dot_node_kwargs = Expr.dot_node_kwargs | dict(fillcolor='lightgreen', shape='diamond')
-    def __init__(self, token, value, lit_type) -> None:
-        super().__init__(token)
+    def __init__(self, meta, token, value, lit_type) -> None:
+        super().__init__(meta)
         self.value = value
         self.type = lit_type
 
@@ -249,16 +238,22 @@ class Literal(Expr):
         return visitor.visitLiteral(self, *args, **kwargs)
 
     def __repr__(self):
-        return f'<"{__class__}" obj w/ val = "{self.value}" at {id(self)}>'
+        return f'<{self.type.__name__.upper()} = {self.value}>'
 
 # literals
-class NumLit(Literal):
-    type = float
-    def __init__(self, token) -> None:
-        super().__init__(token, float(token), float)
+class Float(Literal):
+    def __init__(self, meta, token) -> None:
+        super().__init__(meta, token, float(token), float)
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitNumLit(self, *args, **kwargs)
+        return visitor.visitFloat(self, *args, **kwargs)
+
+class Int(Literal):
+    def __init__(self, meta, token) -> None:
+        super().__init__(meta, token, int(token), int)
+
+    def accept(self, visitor, *args, **kwargs):
+        return visitor.visitInt(self, *args, **kwargs)
 
 
 class StrLit(Literal):
@@ -297,7 +292,7 @@ class Array(Container):
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitArray(self, *args, **kwargs)
 
-class Index(Reference):
+class Index(Expr):
     def __init__(self, meta, base, idx) -> None:
         super().__init__(meta)
         self.base = base

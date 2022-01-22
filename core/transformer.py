@@ -19,8 +19,11 @@ When used as a lark transformer, this class defines how the AST nodes are built.
 # check for cycles in inheritance chain (error)
 # allow passing instance of subclass to fun expecting baseclass and whatnot
 
+# in python mode, make it so can import python files which then bind to builtins
+
 import lark
 from icecream import ic
+from numpy import isin
 
 from core.program import Program
 from core.nodes import *
@@ -36,16 +39,16 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         super().__init__()
 
     # GLOBALS
-    def root(self, meta, *globs):
+    def root(self, meta, *globals):
         main_id = None
-        for glob in globs:
-            if isinstance(glob, AssignDecl) and glob.lhs.name == 'main':
-                main_id = glob.lhs
+        for global_stmt in globals:
+            if isinstance(global_stmt, FuncObj) and global_stmt.ident.ident_token == 'main':
+                main_id = global_stmt.ident
                 break
         else:
             raise ValueError('Can not find main!')
-        globs += (Call(meta, main_id, ()),)
-        return Program(Root(meta, NodeList(meta, globs, 'globals')))
+        globals += (Call(meta, main_id, ()),)
+        return Program(Root(meta, NodeList(meta, globals, 'globals')))
 
     globals = make_collector('globals')
 
@@ -83,7 +86,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         while_node = While(meta, cond, body, None)  # incorporate else_block some how
         return NodeList(meta, [assign_node, while_node], 'while')
 
-    return_ = lambda _, meta, expr: Return(meta, expr or None_(meta))
+    def return_stmt(self, meta, expr):
+        return ReturnStmt(meta, expr or None_(None))
 
     # assignment
     def assign_decl(self, meta, declarations, exprs):
@@ -114,19 +118,21 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
             )
 
     # definition
-    def fn_def(self, meta, decorator, generics, mutability_mod, scope_mod, ret_type, identifier, formals, body):
-        fn_obj = FnObj(
-            meta,
-            decorator,
-            generics,
-            mutability_mod,
-            scope_mod,
-            ret_type,
-            formals or NodeList(meta, [], 'formals'),
-            body
-        )
-        fn_obj.name = identifier.name
-        return AssignDecl(meta, identifier, fn_obj, None, None, None)
+    def func_def(self, meta, ident, formals, ret_type, body):
+        #ic(ident, formals, ret_type, body)
+        return FuncObj(meta, ident, formals or NodeList(None, [], 'formals'), ret_type, body)
+
+    def float_num(self, meta, float_token):
+        return Float(meta, float_token)
+
+    def int_num(self, meta, int_token):
+        return Int(meta, int_token)
+
+    def string(self, meta, str_token):
+        raise NotImplementedError
+
+    def var(self, meta, ident_token):
+        return Var(meta, ident_token)
 
     formals = make_collector('formals')
 
@@ -200,12 +206,8 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
         return method_obj # AssignDecl(meta, identifier, method_obj, None, None, None)
 
     # TYPING
-    def type_(self, meta, type_token, execution_modifier):
-        if isinstance(type_token, FnType):
-            assert execution_modifier is None
-            return type_token
-        else:
-            return PrimitiveType(meta, type_token, execution_modifier)
+    def var(self, meta, ident_token):
+        return Var(meta, ident_token)
 
     # EXPRESSIONS
     exprs = make_collector('exprs')
@@ -236,15 +238,16 @@ class ASTBuilder(lark.visitors.Transformer_InPlaceRecursive):
     def lval(self, meta, base, indexes):
         return Index(meta, base, indexes)  # will need to adapt for calls later
 
-    simple_id = ID
-
     # call
-    call = lambda _, meta, id_, *actuals: Call(meta, id_, actuals)
-    actuals = make_collector('actuals')
+    def call(self, meta, ident, *actuals):
+        assert isinstance(ident, Var), ic(ident)
+        return Call(meta, ident, actuals)
+
+    arguments = make_collector('arguments')
     kwarg = Assign
 
-    # literals
-    NUMBER, STRING, BOOLEAN, NONE = NumLit, StrLit, BoolLit, None_
+    def primitive_type(self, meta, primitive_token):
+        return PrimitiveType(meta, primitive_token)
 
     def attempt(self, meta, try_, catch, finally_):
         return TryCatch(meta, try_, catch, finally_)

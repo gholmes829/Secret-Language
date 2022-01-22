@@ -79,7 +79,7 @@ class InternalFunction(InternalCallable):
     def __call__(self, interpreter, *args):
         assert len(args) == len(self.fn_obj.formals)
 
-        with interpreter.enter_scope(self.fn_obj.name, self.closure):
+        with interpreter.enter_scope(self.fn_obj.ident.ident_token, self.closure):
             for arg, formal in zip(args, self.fn_obj.formals):
                 interpreter.env.define(formal.name, arg)
             try:
@@ -92,7 +92,7 @@ class InternalFunction(InternalCallable):
                 return None
 
     def __repr__(self):
-        return f'<Internal Function, "{self.fn_obj.name}">'
+        return f'<Internal Function, "{self.fn_obj.ident.ident_token}">'
 
 
 
@@ -115,6 +115,7 @@ class Environment:
     def define(self, name, val):
         #if name in self.scope:
         #    raise ValueError(f'"{name}" is already defined with value "{val}".')  # might want to enable this but wld break mult for loop
+        #ic(self.name, name, val)
         self.scope[name] = val
 
     def get(self, name):

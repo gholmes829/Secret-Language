@@ -1,9 +1,9 @@
 //
 
 root: (import_stmt | assign_decl_stmt | def_stmt)*
-stmt: compound_stmt | simple_stmt
+?stmt: compound_stmt | simple_stmt
 ?compound_stmt: branch_stmt | loop_stmt | for_stmt | with_stmt | try_catch_stmt | def_stmt
-?simple_stmt: assign_decl_stmt | assign_stmt | import_stmt | call_expr_stmt | flow_stmt
+?simple_stmt: assign_decl_stmt | assign_stmt | import_stmt | call | flow_stmt
 ?flow_stmt: "break" -> break_stmt
     | "continue" -> continue_stmt
     | "return" [expr] -> return_stmt
@@ -15,12 +15,13 @@ branch_stmt: simple_branch_stmt ("else" simple_branch_stmt)* else_stmt?
     | "unless" expr "{" body "}" -> unless_branch_stmt
 else_stmt: "else" "{" body "}"
 
-?loop_stmt: "until" expr "{" body "}" [else] -> until_loop
-    | "while" expr "{" body "}" [else] -> while_loop 
+?loop_stmt: "until" expr "{" body "}" [else_stmt] -> until_loop
+    | "while" expr "{" body "}" [else_stmt] -> while_loop 
 
-for_stmt: "for" _comma_del{expr} ("in" | ":") expr "{" body "}" [else_stmt]
+for_stmt: "for" expr_list ("in" | ":") expr "{" body "}" [else_stmt]
 
-with_stmt: "with" _comma_del{with_item} "{" body "}"
+with_stmt: "with" with_items "{" body "}"
+with_items: _comma_del{with_item}
 with_item: expr ["as" expr]
 
 try_catch_stmt: try_stmt catch_stmt+ [else_stmt] [finally_stmt]
@@ -28,16 +29,22 @@ try_stmt: "try" "{" body "}"
 catch_stmt: "catch" expr ["as" NAME] "{" body "}"
 finally_stmt: "finally" "{" body "}"
 
-def_stmt: decorated_def_stmt
-?decorator: "@" ref_expr ["(" arguments ")"]
+?def_stmt: decorated_def_stmt
+?decorator: "@" dotted_name ["(" arguments ")"]
+decorators: decorator+
 ?decorated_def_stmt: decorators? templated_def_stmt
-?templated_def_stmt: templating? def_stmt
-?simple_def_stmt: "class" NAME ["(" expr ")"] "{" [class_body] "}" -> cls_def
-    | "func" [modifiers] NAME "(" [typed_arguments] ")" "->" ret_type "{" body "}" -> fn_def
+?templated_def_stmt: templating? simple_def_stmt
+?simple_def_stmt: "class" NAME ["(" expr_list ")"] "{" [class_body] "}" -> class_def
+    | "func" var "(" [formals] ")" "->" full_type "{" body "}" -> func_def
 
-assign_decl_stmt: "let" _comma_del{decl_identifier} "=" assign_stmt
-decl_identifier: [type_modifiers] NAME
-assign_stmt: _comma_del{expr} "=" assign_stmt | _comma_del{expr}
+class_body: (assign_decl_stmt | def_stmt)*
+assign_decl_stmt: "let" decl_identifiers ("=" expr_list)+
+decl_identifiers: _comma_del{decl_identifier}
+decl_identifier: [modifiers] NAME
+assign_stmt: expr_list ("=" expr_list)+
+
+modifiers: modifier? modifier
+modifier: "static" | "const"
 
 import_stmt: import_name | import_from
 import_name: "import" dotted_as_names
@@ -47,23 +54,27 @@ import_as_name: NAME ["as" NAME]
 dotted_as_name: dotted_name ["as" NAME]
 import_as_names: import_as_name ("," import_as_name)* [","]
 dotted_as_names: dotted_as_name ("," dotted_as_name)*
-dotted_name: NAME ("." NAME)*
+?dotted_name: NAME ("." NAME)*
 
-?atom_expr: atom_expr "(" [arguments] ")" -> call
-    | atom_expr "[" subscriptlist "]" -> getitem
+?atom_expr: call
+    | atom_expr "[" expr_list "]" -> getitem
     | atom_expr "." NAME -> getattr
     | atom
 
-?atom: "(" yield_expr ")"
-    | "(" [_comma_del{expr} [","]] ")" -> tuple
+templating: "<" expr_list ">"
+
+call: atom_expr [templating] "(" [arguments] ")"
+
+?atom: "(" [expr_list [","]] ")" -> tuple
     | "(" comprehension{expr} ")" -> tuple_comprehension
-    | "[" [_comma_del{expr} [","]] "]" -> list
+    | "[" [expr_list [","]] "]" -> list
     | "[" comprehension{expr} "]"  -> list_comprehension
-    | "<" [_comma_del{expr} [","]] ">" -> dict
+    | "<" [expr_list [","]] ">" -> dict
     | "<" comprehension{key_value} ">" -> dict_comprehension
-    | "{" [_comma_del{expr} [","]] "}" -> set
+    | "{" [expr_list [","]] "}" -> set
     | "{" comprehension{expr} "}" -> set_comprehension
-    | NAME -> var
+    | obj_type
+    | var
     | number 
     | string_concat
     | "(" expr ")"
@@ -72,51 +83,74 @@ dotted_name: NAME ("." NAME)*
     | "false" -> false_lit
     | anon_fn
 
-bool_lit: true_lit | false_lit
+var.1: NAME
+
+?full_type: templated_type
+full_types: _comma_del{obj_type}
+?templated_type: base_type templating?
+?base_type: primitive_type | obj_type
+?obj_type: dotted_name | fn_type
+?fn_type: "(" "[" [full_types] "]" "->" obj_type ")"
+!primitive_type: "int" | "float" | "string" | "none" | "void"
+
+anon_fn: "(" [formals] ")" "->" expr "{" body "}"
 key_value: expr ":" expr
 ?string_concat: string+
 
 arguments: _comma_del{argvalue}
 ?argvalue: expr ("=" expr)?
+formals: _comma_del{formal}
+?formal: typed_arg | formal "=" expr -> default_typed_arg
+typed_arg: expr NAME
 
-expr: !operation ("if" | "unless") operation "else" expr -> conditional
+?expr: operation "if" operation "else" expr -> if_conditional
+    | operation "unless" operation "else" expr -> unless_conditional
     | operation "where" NAME "=" expr -> deffered_expr
     | NAME ":=" expr -> assign_expr
     | operation
 
-operation: or_op
+?operation: or_op
 ?or_op: _del{and_op, "or"}
 ?and_op: _del{not_op, "and"}
 ?not_op: "not" not_op | comparison
-?!comparison: _del{bw_or_op, ("<"|">"|"=="|">="|"<="|"!="|"in"|"not" "in"|"is"|"is" "not")}
+?!comparison: _del{bw_or_op, COMP_OPS}
 ?bw_or_op: _del{bw_xor_op, "|"}
-?bw_xor_op: _del{bw_xor_op, "^"}
+?bw_xor_op: _del{bw_and_op, "^"}
 ?bw_and_op: _del{bw_shift_op, "&"}
-?!bw_shift_op: _del{arith_op, ("<<" | ">>")}
-?!arith_op: _del{term, ("+" | "-")}
-?!term: _del{factor, ("*"|"@"|"/"|"%"|"//"))
-?!factor: ("+"|"-"|"~") factor | power
-?power: 
- ("**" factor)?
+?!bw_shift_op: _del{arith_op, SHIFT_OPS}
+?!arith_op: _del{term, TERM_OPS}
+?!term: _del{factor, FACTOR_OPS}
+?!factor: UNARY_OPS factor | power
+?power: atom_expr ("**" factor)?
+
+FACTOR_OPS: ("*"|"@"|"/"|"%"|"//")
+TERM_OPS: ("+" | "-")
+UNARY_OPS: ("+"|"-"|"~")
+SHIFT_OPS: ("<<" | ">>")
+COMP_OPS: ("<"|">"|"=="|">="|"<="|"!="|"in"|"not" "in"|"is"|"is" "not")
 
 
 comprehension{comp_result}: comp_result comp_fors [comp_if]
 comp_fors: comp_for+ 
-comp_for: "for" _comma_del{expr} "in" expr
+comp_for: "for" expr_list "in" expr
 ?comp_if: "if" expr
 
-
+expr_list: _comma_del{expr}
 body: stmt*
 
 _comma_del{x}: _del{x, ","}
 _del{x, del}: x (del x)*
 
-number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER | INF | NINF
-string: STRING | LONG_STRING
+?number: float_num | int_num | imag_num
+imag_num: IMAG_NUMBER
+float_num: FLOAT_NUMBER | INF | NINF
+int_num: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER
 
+string: STRING | LONG_STRING
 STRING: /([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
+// REMOVE ? AT START AND HANDLE
 _SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
 DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*
           |   "0"             ("_"?  "0"                            )* /(?![1-9])/

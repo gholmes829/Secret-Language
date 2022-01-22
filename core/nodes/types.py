@@ -15,7 +15,8 @@ class ObjectType(ASTNode):
 class PrimitiveType(ObjectType):
 
     data_types = {
-        'num': float,
+        'int': int,
+        'float': float,
         'str': str,
         'bool': bool,
         'none': None,
@@ -24,31 +25,29 @@ class PrimitiveType(ObjectType):
 
     inv_data_types = {v: k for k, v in data_types.items()}
 
-    def __init__(self, base_token, _type, execution_modifier) -> None:
-        super().__init__(base_token)
-        self.raw_type = _type
-        self.type = PrimitiveType.data_types[_type.value]
-        self.execution_modifier = execution_modifier
+    def __init__(self, meta, primitive_token) -> None:
+        super().__init__(meta)
+        self.primitive_token = primitive_token
+        self.type = PrimitiveType.data_types[primitive_token]
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitPrimitiveType(self, *args, **kwargs)
 
+    def __repr__(self):
+        return f'<Type "{self.primitive_token}">'
 
-class FnType(ObjectType):
-    def __init__(self, meta, mutability_mod, scope_mod, ret_type, formal_types) -> None:
+
+class FuncType(ObjectType):
+    def __init__(self, meta, formal_types, ret_type) -> None:
         super().__init__(meta)
-        self.identifier = str(id(self))
-        self.mutability_mod = mutability_mod
-        self.scope_modifier = scope_mod
-        self.ret_type = ret_type
         self.formal_types = formal_types
-        self.type = self
+        self.ret_type = ret_type
 
     def accept(self, visitor, *args, **kwargs):
-        return visitor.visitFnType(self, *args, **kwargs)
+        return visitor.visitFuncType(self, *args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'<"fn_type" at {id(self)}>'
+        return f'<"([{", ".join(self.formal_types)}] -> {self.ret_type})" at {self.id}>'
 
 class ClassType(ObjectType):
     def __init__(self, meta, cls_name) -> None:

@@ -44,7 +44,7 @@ class While(Stmt):
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitWhile(self, *args, **kwargs)
 
-class Return(Stmt):
+class ReturnStmt(Stmt):
     def __init__(self, meta, expr) -> None:
         super().__init__(meta)
         self.expr = expr
@@ -52,6 +52,9 @@ class Return(Stmt):
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitReturn(self, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'<Return at {self.id}>'
 
 
 # assignment

@@ -31,8 +31,9 @@ def unparse_ast(ast):
 
 def graph_ast(parse_tree, src_f):
     png_path = src_f.replace('.lang', '.png')
-        
     if not osp.isfile(png_path) or osp.getmtime(src_f) > osp.getmtime(png_path):
+        ic(png_path)
+        input(parse_tree)
         lark.tree.pydot__tree_to_png(parse_tree, png_path, rankdir='TB')
 
     # out_dot_path = src_f.replace(f'.{LANG_EXT}', '.dot')
@@ -78,6 +79,7 @@ def main():
         )
         transformer = ASTBuilder()
         parse_tree = parser.parse(src)
+        if args.gen_ast: graph_ast(parse_tree, args.src_f)
         prog = transformer.transform(parse_tree)
 
     else:
@@ -95,7 +97,6 @@ def main():
         prog = parser.parse(src)
 
     if args.unparse: unparse_ast(prog)
-    if args.gen_ast: graph_ast(parse_tree, args.src_f)
     if args.cache: cache_ast(prog, args.src_f)
 
     sys.exit(prog.interpret())

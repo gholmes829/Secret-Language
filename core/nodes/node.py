@@ -12,6 +12,7 @@ class ASTNode(metaclass = ABCMeta):
     dot_node_kwargs = dict()
     def __init__(self, meta) -> None:
         self.meta = meta
+        self.id = hex(id(self))
         # ic(meta.type, meta.value)
         # input('\n\n\n')
 
@@ -39,10 +40,10 @@ class Root(ASTNode):
 
 
 class NodeList(ASTNode):
-    def __init__(self, meta, nodes, name) -> None:
+    def __init__(self, meta, nodes, list_name) -> None:
         super().__init__(meta)
         self.nodes = nodes
-        self.name = name
+        self.list_name = list_name
 
     def accept(self, visitor, *args, **kwargs):
         return visitor.visitNodeList(self, *args, **kwargs)
@@ -57,4 +58,4 @@ class NodeList(ASTNode):
         return self.nodes.__iter__()
 
     def __repr__(self):
-        return f'<"{self.nodes}" NodeList obj at {id(self)}>'
+        return f'<NodeList "{self.list_name}" at {self.id}>'
